@@ -1,6 +1,14 @@
 @import "tailwindcss";
 @config "../../tailwind.config.ts";
 
+/* Tailwind v4 不会把 JS 配置里的颜色生成 CSS 变量，body 用到的变量在这里声明（值与 tailwind.config.ts 保持一致） */
+@theme {
+  --color-paper: #f7f3ec;
+  --color-ink: #1a1a1a;
+  --color-accent: #1f4d3a;
+  --color-rule: #d9d3c7;
+}
+
 body {
   background-color: var(--color-paper);
   color: var(--color-ink);
