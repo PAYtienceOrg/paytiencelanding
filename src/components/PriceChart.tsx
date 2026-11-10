@@ -46,16 +46,16 @@ export function PriceChart() {
 
   return (
     <svg
-      viewBox="0 0 520 320"
+      viewBox="0 0 520 330"
       className="h-auto w-full font-sans text-ink"
       role="img"
       aria-label="ETH price falling from $2,500 to the $2,400 target, where the order fills for 5 ETH, over a 3-day window"
     >
       <line x1={LEFT} x2={RIGHT} y1={y(TARGET)} y2={y(TARGET)} className="stroke-accent" strokeWidth={1.25} strokeDasharray="6 5" />
-      <text x={LEFT + 4} y={y(TARGET) - 8} className="fill-accent text-[15px] font-semibold tabular-nums">
+      <text x={LEFT + 4} y={y(TARGET) - 8} className="fill-accent text-[20px] font-semibold tabular-nums">
         Target $2,400
       </text>
-      <text x={RIGHT} y={y(NOW) - 52} textAnchor="end" className="fill-ink text-[15px] font-semibold tabular-nums">
+      <text x={RIGHT} y={y(NOW) - 52} textAnchor="end" className="fill-ink text-[20px] font-semibold tabular-nums">
         Now $2,500
       </text>
 
@@ -83,12 +83,12 @@ export function PriceChart() {
             strokeWidth={1.25}
             initial={{ r: 5, opacity: 0.7 }}
             animate={reduce ? { r: 14, opacity: 0.25 } : { r: 18, opacity: 0 }}
-            transition={reduce ? { duration: 0 } : { duration: 1.4, repeat: Infinity, ease: "easeOut" }}
+            transition={reduce ? { duration: 0 } : { duration: 1.4, repeat: 2, ease: "easeOut" }}
           />
           <motion.circle {...DOT} r={5} className="fill-accent" {...fade()} />
           <motion.g {...fade(0.15)}>
-            <rect x={DOT.cx - 200} y={DOT.cy - 66} width={200} height={30} className="fill-paper stroke-ink" strokeWidth={1} />
-            <text x={DOT.cx - 100} y={DOT.cy - 46} textAnchor="middle" className="fill-ink text-[14px] font-semibold tabular-nums">
+            <rect x={DOT.cx - 270} y={DOT.cy - 74} width={262} height={38} className="fill-paper stroke-ink" strokeWidth={1} />
+            <text x={DOT.cx - 139} y={DOT.cy - 48} textAnchor="middle" className="fill-ink text-[18px] font-semibold tabular-nums">
               {LABEL}
             </text>
             <line x1={DOT.cx - 24} y1={DOT.cy - 36} x2={DOT.cx - 7} y2={DOT.cy - 8} className="stroke-ink" strokeWidth={1} />
@@ -109,13 +109,13 @@ export function PriceChart() {
         animate={{ pathLength: 1 }}
         transition={{ duration: DRAW_SECONDS, ease: "linear" }}
       />
-      <text x={LEFT} y={298} className="fill-ink text-[14px]">
+      <text x={LEFT} y={304} className="fill-ink text-[18px]">
         Today
       </text>
-      <text x={(LEFT + RIGHT) / 2} y={298} textAnchor="middle" className="fill-ink text-[14px] font-semibold">
+      <text x={(LEFT + RIGHT) / 2} y={304} textAnchor="middle" className="fill-ink text-[18px] font-semibold">
         3-day window
       </text>
-      <text x={RIGHT} y={298} textAnchor="end" className="fill-ink text-[14px]">
+      <text x={RIGHT} y={304} textAnchor="end" className="fill-ink text-[18px]">
         Day 3
       </text>
     </svg>
