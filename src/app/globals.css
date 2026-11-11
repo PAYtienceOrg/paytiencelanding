@@ -59,7 +59,8 @@ p {
 /* 计算器滑块：已选部分深绿，未选部分浅灰，圆形滑块 */
 .range {
   appearance: none;
-  height: 22px;
+  /* 整条可点区域 44px 高，手指好拖 */
+  height: 44px;
   background: transparent;
   cursor: pointer;
 }

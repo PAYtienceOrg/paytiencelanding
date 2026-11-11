@@ -30,14 +30,15 @@ export function GoodToKnow() {
           title="The rules, in plain words."
           intro="Four things to understand before you set a price."
         />
-        <dl className="grid gap-px border border-ink/30 bg-ink/20 sm:grid-cols-2">
+        {/* 紧凑列表：左边规则名，右边一句解释 */}
+        <dl className="border-b border-rule">
           {notes.map((n, i) => (
-            <div key={n.title} className="bg-paper p-5">
+            <div key={n.title} className="grid gap-1 border-t border-rule py-4 sm:grid-cols-[15rem_1fr] sm:gap-6">
               <dt className="flex items-baseline gap-3 font-serif text-lg font-bold">
                 <span className="text-sm text-accent tabular-nums">{String(i + 1).padStart(2, "0")}</span>
                 {n.title}
               </dt>
-              <dd className="mt-2 text-sm leading-relaxed text-ink/80">{n.body}</dd>
+              <dd className="text-sm leading-relaxed text-ink/80 sm:pt-1">{n.body}</dd>
             </div>
           ))}
         </dl>
