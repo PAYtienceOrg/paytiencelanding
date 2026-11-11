@@ -1,0 +1,7 @@
+# 用 CLI 部署时不上传这些本地文件
+.env*
+!.env.example
+.claude/
+.next/
+node_modules/
+coverage/
