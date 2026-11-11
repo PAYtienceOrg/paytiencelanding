@@ -44,6 +44,16 @@ export class WaitlistService {
     if (!this.allowPost(ip)) {
       return { status: 429, body: { error: "Too many requests. Please try again in a minute." } };
     }
+    return this.join(input);
+  }
+
+  // 已验证邮箱的登录用户加入候补名单。不走 IP 限流：只有登录后才能调用，同一邮箱重复调用只返回原名次。
+  async joinMember(email: string, ref?: string): Promise<SignupResult> {
+    const validRef = ref && /^[a-zA-Z0-9]{8}$/.test(ref) ? ref : undefined;
+    return this.join(validRef ? { email, ref: validRef } : { email });
+  }
+
+  private async join(input: unknown): Promise<SignupResult> {
     const parsed = signupSchema.safeParse(input);
     if (!parsed.success) {
       const issue = parsed.error.issues[0];
@@ -73,16 +83,38 @@ export class WaitlistService {
   }
 }
 
-let service: WaitlistService | undefined;
+// Production without Supabase: refuse signups (503) instead of silently
+// keeping them in memory, where they would be lost on restart.
+class UnconfiguredWaitlistStore implements WaitlistStore {
+  async join(): Promise<never> {
+    throw new Error("Waitlist storage is not configured.");
+  }
+
+  async count(): Promise<never> {
+    throw new Error("Waitlist storage is not configured.");
+  }
+}
+
+type Env = Record<string, string | undefined>;
+
+export function createWaitlistStore(env: Env = process.env): WaitlistStore {
+  const url = env.SUPABASE_URL?.trim();
+  const key = env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (env.NODE_ENV !== "test" && url && key) return new SupabaseWaitlistStore(url, key);
+  if (env.NODE_ENV === "production") {
+    console.error(
+      "[waitlist] SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are not set. Signups are disabled until they are configured.",
+    );
+    return new UnconfiguredWaitlistStore();
+  }
+  return new MemoryWaitlistStore();
+}
+
+// Kept on globalThis: Next.js bundles each route separately, so a module-level
+// variable would give the signup and count routes different memory stores.
+const shared = globalThis as typeof globalThis & { __waitlistService?: WaitlistService };
 
 export function getWaitlistService(): WaitlistService {
-  if (!service) {
-    const url = process.env.SUPABASE_URL?.trim();
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-    const store = process.env.NODE_ENV !== "test" && url && key
-      ? new SupabaseWaitlistStore(url, key)
-      : new MemoryWaitlistStore();
-    service = new WaitlistService(store);
-  }
-  return service;
+  shared.__waitlistService ??= new WaitlistService(createWaitlistStore());
+  return shared.__waitlistService;
 }

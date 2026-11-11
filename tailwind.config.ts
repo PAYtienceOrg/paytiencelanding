@@ -9,6 +9,7 @@ const config: Config = {
         ink: "#1A1A1A",
         accent: "#1F4D3A",
         rule: "#D9D3C7",
+        mint: "#E4EBE1",
       },
       fontFamily: {
         serif: ["var(--font-playfair)", "Georgia", "serif"],

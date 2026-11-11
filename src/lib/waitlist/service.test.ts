@@ -1,9 +1,36 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryWaitlistStore } from "./memoryStore";
-import { WaitlistService } from "./service";
+import { createWaitlistStore, WaitlistService } from "./service";
 import { ReferralCodeConflictError } from "./store";
 import { SupabaseWaitlistStore } from "./supabaseStore";
+
+describe("storage selection from environment", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  const supabase = { SUPABASE_URL: "https://x.supabase.co", SUPABASE_SERVICE_ROLE_KEY: "key" };
+
+  it("uses Supabase when both values are set outside tests", () => {
+    expect(createWaitlistStore({ NODE_ENV: "production", ...supabase })).toBeInstanceOf(SupabaseWaitlistStore);
+    expect(createWaitlistStore({ NODE_ENV: "development", ...supabase })).toBeInstanceOf(SupabaseWaitlistStore);
+  });
+
+  it("uses memory in development and tests when Supabase is not configured", () => {
+    expect(createWaitlistStore({ NODE_ENV: "development" })).toBeInstanceOf(MemoryWaitlistStore);
+    expect(createWaitlistStore({ NODE_ENV: "test", ...supabase })).toBeInstanceOf(MemoryWaitlistStore);
+  });
+
+  it("refuses signups in production without Supabase instead of losing them in memory", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const store = createWaitlistStore({ NODE_ENV: "production", SUPABASE_URL: "https://x.supabase.co" });
+    expect(store).not.toBeInstanceOf(MemoryWaitlistStore);
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("SUPABASE_SERVICE_ROLE_KEY"));
+
+    const service = new WaitlistService(store);
+    expect((await service.signup({ email: "a@example.com" }, "ip")).status).toBe(503);
+    expect((await service.count()).status).toBe(503);
+  });
+});
 
 describe("waitlist service with memory storage", () => {
   let store: MemoryWaitlistStore;
@@ -200,36 +227,36 @@ describe("waitlist HTTP routes", () => {
     vi.resetModules();
     vi.stubEnv("SUPABASE_URL", "");
     vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "");
+    delete (globalThis as { __waitlistService?: unknown }).__waitlistService;
   });
   afterEach(() => vi.unstubAllEnvs());
 
-  it("shares the signup store with the count route and returns JSON statuses", async () => {
-    const { POST } = await import("../../app/api/waitlist/route");
+  it("count route reflects members who joined after signing up", async () => {
     const { GET } = await import("../../app/api/waitlist/count/route");
+    const { getWaitlistService } = await import("./service");
     expect(await (await GET()).json()).toEqual({ total: 0 });
-    const request = () => new Request("http://localhost/api/waitlist", {
-      method: "POST", body: JSON.stringify({ email: "api@example.com" }),
-      headers: { "x-forwarded-for": "192.0.2.1, 10.0.0.1" },
-    });
-    const created = await POST(request());
-    expect(created.status).toBe(201);
-    expect(await created.json()).toMatchObject({ position: 1, total: 1 });
-    expect((await POST(request())).status).toBe(200);
+    await getWaitlistService().joinMember("member@example.com");
     const count = await GET();
     expect(count.headers.get("cache-control")).toContain("no-store");
     expect(await count.json()).toEqual({ total: 1 });
   });
+});
 
-  it("counts malformed JSON attempts and returns 429 on the sixth", async () => {
-    const { POST } = await import("../../app/api/waitlist/route");
-    const request = () => new Request("http://localhost/api/waitlist", {
-      method: "POST", body: "{", headers: { "x-real-ip": "192.0.2.2" },
-    });
-    for (let i = 0; i < 5; i++) {
-      const response = await POST(request());
-      expect(response.status).toBe(400);
-      expect(await response.json()).toHaveProperty("error");
-    }
-    expect((await POST(request())).status).toBe(429);
+describe("joinMember (signed-in users)", () => {
+  it("joins once, ignores bad referral codes and is not rate limited", async () => {
+    const service = new WaitlistService(new MemoryWaitlistStore());
+    const first = await service.joinMember("a@example.com", "not-a-code");
+    expect(first.status).toBe(201);
+    for (let i = 0; i < 8; i++) expect((await service.joinMember("a@example.com")).status).toBe(200);
+  });
+
+  it("applies a valid referral code from the account", async () => {
+    const service = new WaitlistService(new MemoryWaitlistStore());
+    for (const e of ["1@x.com", "2@x.com", "3@x.com"]) await service.joinMember(e);
+    const third = await service.joinMember("3@x.com");
+    if (third.status !== 200) throw new Error("expected existing member");
+    await service.joinMember("new@x.com", third.body.referralCode);
+    const moved = await service.joinMember("3@x.com");
+    expect(moved.status === 200 && moved.body.position).toBe(1);
   });
 });

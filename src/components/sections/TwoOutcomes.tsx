@@ -1,54 +1,80 @@
-"use client";
-
-import { motion, useReducedMotion } from "framer-motion";
+import type { ReactNode } from "react";
 import { CountUp } from "../motion/CountUp";
 import { Reveal } from "../motion/Reveal";
+import { SectionHeading } from "./SectionHeading";
 
-// 小线图：进入视口时把线画出来。
-function Sparkline({ d }: { d: string }) {
-  const reduce = useReducedMotion();
+const iconProps = {
+  viewBox: "0 0 36 36",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 1.75,
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+  "aria-hidden": true,
+  className: "h-10 w-10 text-accent",
+} as const;
+
+const CheckIcon = () => (
+  <svg {...iconProps}>
+    <circle cx="18" cy="18" r="14" />
+    <path d="M11.5 18.5l4.5 4.5 8.5-9.5" />
+  </svg>
+);
+
+const RefundIcon = () => (
+  <svg {...iconProps}>
+    <path d="M8 18a10 10 0 1 1 3 7" />
+    <path d="M8 11v7h7" />
+  </svg>
+);
+
+function Outcome({ icon, title, body, result, tinted }: { icon: ReactNode; title: string; body: string; result: ReactNode; tinted?: boolean }) {
   return (
-    <svg viewBox="0 0 120 40" className="h-10 w-28 text-accent" fill="none" aria-hidden>
-      <motion.path
-        d={d}
-        stroke="currentColor"
-        strokeWidth={2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        initial={reduce ? false : { pathLength: 0 }}
-        whileInView={{ pathLength: 1 }}
-        viewport={{ once: true }}
-        transition={{ duration: 1, ease: "easeOut" }}
-      />
-    </svg>
+    <div className={`flex h-full border border-ink/40 ${tinted ? "bg-mint" : "bg-white/40"}`}>
+      <div className="flex shrink-0 items-center border-r border-ink/25 px-4 sm:px-6">{icon}</div>
+      <div className="px-5 py-4">
+        <h3 className="font-serif text-2xl font-bold">{title}</h3>
+        <p className="mt-1 text-sm">{body}</p>
+        <p className="mt-3 font-serif text-2xl font-bold text-accent">{result}</p>
+      </div>
+    </div>
   );
 }
 
-// No. 02：两种结果并排对比。
+// 两种结果并排对比。
 export function TwoOutcomes() {
   return (
-    <section aria-labelledby="two-outcomes-title" className="mx-auto max-w-5xl px-6 py-16">
-      <p className="text-xs font-semibold uppercase tracking-[0.2em]">No. 02</p>
-      <h2 id="two-outcomes-title" className="mt-2 font-serif text-3xl font-bold sm:text-4xl">
-        Two outcomes
-      </h2>
-      <div className="mt-6 grid gap-10 border-t border-ink pt-8 md:grid-cols-2 md:gap-0">
-        <Reveal className="md:pr-10">
-          <Sparkline d="M2 8 L25 12 L45 10 L70 22 L95 28 L118 34" />
-          <h3 className="mt-4 font-serif text-2xl font-bold">Price dips to $2,400</h3>
-          <p className="mt-2 text-sm">Your target is reached within the window.</p>
-          <p className="mt-4 font-serif text-3xl font-bold text-accent">You get 5 ETH at $2,400</p>
+    <section aria-labelledby="two-outcomes-title" className="py-12">
+      <SectionHeading
+        id="two-outcomes-title"
+        label="Outcomes"
+        title="Two outcomes. Zero guesswork."
+        intro="Every order ends one of two ways — and you know both before you start."
+      />
+      <div className="mt-8 grid gap-4 md:grid-cols-2 md:gap-8">
+        <Reveal>
+          <Outcome
+            tinted
+            icon={<CheckIcon />}
+            title="Price hits $2,400"
+            body="Your target is reached within 3 days."
+            result="You get 5 ETH at $2,400"
+          />
         </Reveal>
-        <Reveal delay={0.15} className="md:border-l md:border-rule md:pl-10">
-          <Sparkline d="M2 14 L30 12 L60 15 L90 12 L118 13" />
-          <h3 className="mt-4 font-serif text-2xl font-bold">Price stays above</h3>
-          <p className="mt-2 text-sm">The window closes without reaching your target.</p>
-          <p className="mt-4 font-serif text-3xl font-bold text-accent">
-            <CountUp value={12000} prefix="$" /> back to you, in full
-          </p>
+        <Reveal delay={0.15}>
+          <Outcome
+            icon={<RefundIcon />}
+            title="Price stays above"
+            body="Your payment returns to its original source."
+            result={
+              <>
+                Full <CountUp value={12000} prefix="$" /> refund
+              </>
+            }
+          />
         </Reveal>
       </div>
-      <p className="mt-8 text-xs opacity-70">
+      <p className="mt-4 text-xs opacity-70">
         Example for illustration: 5 ETH, $2,400 target, 3-day window. Crypto prices can move in either direction.
       </p>
     </section>

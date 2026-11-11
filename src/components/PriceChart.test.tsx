@@ -8,7 +8,7 @@ vi.mock("framer-motion", async (importOriginal) => ({
   useReducedMotion: () => reduced.value,
 }));
 
-import { PriceChart } from "./PriceChart";
+import { PriceChart, PriceChartCard } from "./PriceChart";
 
 afterEach(() => {
   cleanup();
@@ -18,14 +18,21 @@ afterEach(() => {
 describe("PriceChart", () => {
   it("减少动画时一开始就显示成交标签", () => {
     render(<PriceChart />);
-    expect(screen.getByText("Filled at $2,400 · 5 ETH")).toBeTruthy();
+    expect(screen.getByText("Filled at $2,400")).toBeTruthy();
   });
 
-  it("始终显示目标价、现价和时间窗口文字", () => {
+  it("始终显示目标价、刻度和时间轴", () => {
     render(<PriceChart />);
     expect(screen.getByText("Target $2,400")).toBeTruthy();
-    expect(screen.getByText("Now $2,500")).toBeTruthy();
-    expect(screen.getByText("3-day window")).toBeTruthy();
+    expect(screen.getByText("$2,600")).toBeTruthy();
+    expect(screen.getByText("Today")).toBeTruthy();
+    expect(screen.getByText("Day 3")).toBeTruthy();
+  });
+
+  it("卡片显示币对和现价", () => {
+    render(<PriceChartCard />);
+    expect(screen.getByText("ETH / USD")).toBeTruthy();
+    expect(screen.getByText("Current price").nextElementSibling?.textContent).toBe("$2,500");
   });
 
   it("有图片角色和文字说明", () => {
@@ -36,6 +43,6 @@ describe("PriceChart", () => {
   it("开启动画时线还没画完，成交标签先不出现", () => {
     reduced.value = false;
     render(<PriceChart />);
-    expect(screen.queryByText("Filled at $2,400 · 5 ETH")).toBeNull();
+    expect(screen.queryByText("Filled at $2,400")).toBeNull();
   });
 });

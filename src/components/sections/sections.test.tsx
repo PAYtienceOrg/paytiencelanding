@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("framer-motion", async (importOriginal) => ({
@@ -16,22 +16,26 @@ vi.stubGlobal(
   },
 );
 
+import { Simulator } from "../simulator/Simulator";
+import { Faq } from "./Faq";
+import { GoodToKnow } from "./GoodToKnow";
 import { HowItWorks } from "./HowItWorks";
+import { MobileNav } from "./MobileNav";
 import { TwoOutcomes } from "./TwoOutcomes";
+import { WhyWait } from "./WhyWait";
 
 afterEach(cleanup);
 
 const banned = /risk-free|guaranteed|zero risk/i;
 
 describe("HowItWorks", () => {
-  it("显示栏目标号和三个步骤", () => {
+  it("显示标题和三个步骤", () => {
     render(<HowItWorks />);
-    expect(screen.getByText("No. 01")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "How it works" })).toBeTruthy();
     expect(screen.getAllByRole("listitem")).toHaveLength(3);
-    expect(screen.getByText(/Pick a coin & amount/)).toBeTruthy();
-    expect(screen.getByText(/Set your price & window/)).toBeTruthy();
-    expect(screen.getByText(/Get it — or get it back/)).toBeTruthy();
+    expect(screen.getByText("Choose your crypto")).toBeTruthy();
+    expect(screen.getByText("Set your price & deadline")).toBeTruthy();
+    expect(screen.getByText("Get crypto or a refund")).toBeTruthy();
   });
 
   it("文案不含禁用词", () => {
@@ -43,15 +47,113 @@ describe("HowItWorks", () => {
 describe("TwoOutcomes", () => {
   it("并排显示两种结果和金额", () => {
     render(<TwoOutcomes />);
-    expect(screen.getByText("No. 02")).toBeTruthy();
-    expect(screen.getByText(/Price dips to \$2,400/)).toBeTruthy();
-    expect(screen.getByText(/Price stays above/)).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Two outcomes. Zero guesswork." })).toBeTruthy();
+    expect(screen.getByText("Price hits $2,400")).toBeTruthy();
+    expect(screen.getByText("Price stays above")).toBeTruthy();
     expect(screen.getByText("$12,000")).toBeTruthy();
-    expect(screen.getByText(/5 ETH at/)).toBeTruthy();
+    expect(screen.getByText("You get 5 ETH at $2,400")).toBeTruthy();
   });
 
   it("文案不含禁用词", () => {
     const { container } = render(<TwoOutcomes />);
+    expect(container.textContent).not.toMatch(banned);
+  });
+});
+
+// 这个文件里动画是关闭的（减少动画），模拟器直接显示最终结果。
+describe("Simulator", () => {
+  const commit = () => screen.getByText("You commit").nextElementSibling?.textContent;
+
+  it("默认：5 ETH，目标 $2,400，下跌情景直接成交", () => {
+    render(<Simulator />);
+    expect(commit()).toBe("$12,000");
+    expect(screen.getByText("You get 5 ETH at $2,400")).toBeTruthy();
+    expect(screen.getByText("Target reached on day 2")).toBeTruthy();
+  });
+
+  it("切到上涨情景：全额退款", async () => {
+    render(<Simulator />);
+    fireEvent.click(screen.getByRole("button", { name: /Price rises/ }));
+    // 旧结果卡片先淡出，新的才出现
+    expect(await screen.findByText("$12,000 refunded in full")).toBeTruthy();
+    expect(screen.getByText(/above your \$2,400 target/)).toBeTruthy();
+  });
+
+  it("换币种时数量重置为该币的默认值", () => {
+    render(<Simulator />);
+    fireEvent.click(screen.getByRole("button", { name: /BTC/ }));
+    expect((screen.getByLabelText("How much") as HTMLSelectElement).value).toBe("0.1");
+    // 65,000 × 96% = 62,400；× 0.1 = 6,240
+    expect(commit()).toBe("$6,240");
+    expect(screen.getByText("You get 0.1 BTC at $62,400")).toBeTruthy();
+  });
+
+  it("拖价格、改数量和天数后结果跟着变", () => {
+    render(<Simulator />);
+    fireEvent.change(screen.getByLabelText("Your price"), { target: { value: "10" } });
+    fireEvent.change(screen.getByLabelText("How much"), { target: { value: "2" } });
+    fireEvent.click(screen.getByRole("button", { name: "7 days" }));
+    expect(commit()).toBe("$4,500");
+    expect(screen.getByText("You get 2 ETH at $2,250")).toBeTruthy();
+    expect(screen.getByText("Target reached on day 5")).toBeTruthy();
+  });
+
+  it("文案不含禁用词", () => {
+    const { container } = render(<Simulator />);
+    fireEvent.click(screen.getByRole("button", { name: /Price rises/ }));
+    expect(container.textContent).not.toMatch(banned);
+  });
+});
+
+describe("WhyWait", () => {
+  it("三条理由", () => {
+    const { container } = render(<WhyWait />);
+    expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(3);
+    expect(container.textContent).not.toMatch(banned);
+  });
+});
+
+describe("GoodToKnow", () => {
+  it("四条规则，带锚点", () => {
+    const { container } = render(<GoodToKnow />);
+    expect(container.querySelector("#good-to-know")).toBeTruthy();
+    expect(container.querySelectorAll("dt")).toHaveLength(4);
+    expect(screen.getByText("Orders fill at your target")).toBeTruthy();
+    expect(container.textContent).not.toMatch(banned);
+  });
+});
+
+describe("MobileNav", () => {
+  const links = [
+    { href: "#a", label: "A" },
+    { href: "#b", label: "B" },
+  ];
+
+  it("点按钮展开，点链接后收起", () => {
+    render(<MobileNav links={links} />);
+    const button = screen.getByRole("button", { name: "Open menu" });
+    expect(button.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(button);
+    expect(screen.getByRole("button", { name: "Close menu" }).getAttribute("aria-expanded")).toBe("true");
+    fireEvent.click(screen.getByRole("link", { name: "A" }));
+    expect(screen.queryByRole("link", { name: "A" })).toBeNull();
+  });
+
+  it("按 Esc 收起", () => {
+    render(<MobileNav links={links} />);
+    fireEvent.click(screen.getByRole("button", { name: "Open menu" }));
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("link", { name: "B" })).toBeNull();
+  });
+});
+
+describe("Faq", () => {
+  it("六个问题，第一个默认展开", () => {
+    const { container } = render(<Faq />);
+    const items = container.querySelectorAll("details");
+    expect(items).toHaveLength(6);
+    expect(items[0].open).toBe(true);
+    expect(items[1].open).toBe(false);
     expect(container.textContent).not.toMatch(banned);
   });
 });

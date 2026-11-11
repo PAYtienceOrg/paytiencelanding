@@ -25,8 +25,19 @@ including when a different referral code is supplied on a retry.
 
 Copy `.env.example` to `.env.local`. With both `SUPABASE_URL` and
 `SUPABASE_SERVICE_ROLE_KEY` set, the server uses Supabase REST via `fetch`.
-With either missing it uses memory. Tests always default to memory, even when
-Supabase variables exist. Environment changes require a server restart.
+With either missing, development uses memory, while production (`NODE_ENV=production`)
+returns `503` for both endpoints and logs a configuration error, so signups are never
+silently lost. Tests always default to memory, even when Supabase variables exist.
+Environment changes require a server restart.
+
+### Going live checklist
+
+1. Create a Supabase project and run [waitlist.sql](./waitlist.sql) in its SQL editor.
+2. Copy the project URL and the `service_role` key (Project Settings → API).
+3. Set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` on the host (and in `.env.local` to test locally).
+4. Make sure the host's proxy sets `x-forwarded-for` or `x-real-ip`; otherwise all
+   visitors share one rate-limit bucket of five signups per minute.
+5. Sign up once on the deployed page and check the row in Supabase → Table Editor → `waitlist_entries`.
 
 Before enabling Supabase, run [waitlist.sql](./waitlist.sql) once in the Supabase
 SQL editor. It creates the table, enables RLS, denies public access, and grants
