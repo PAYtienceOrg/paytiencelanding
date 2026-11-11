@@ -12,7 +12,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${playfair.variable} ${inter.variable}`}>
+    // data-scroll-behavior：页面跳转时 Next.js 会临时关掉平滑滚动，避免切页时慢慢滚
+    <html lang="en" className={`${playfair.variable} ${inter.variable}`} data-scroll-behavior="smooth">
       <body>{children}</body>
     </html>
   );

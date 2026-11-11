@@ -7,15 +7,99 @@
   --color-ink: #1a1a1a;
   --color-accent: #1f4d3a;
   --color-rule: #d9d3c7;
+  --color-mint: #e4ebe1;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background-color: var(--color-paper);
   color: var(--color-ink);
   font-family: var(--font-inter), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--color-accent);
+  color: var(--color-paper);
+}
+
+/* 键盘操作时统一的焦点框 */
+:where(a, button, input, select, summary):focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+.bg-accent :where(a, button, input):focus-visible {
+  outline-color: var(--color-paper);
+}
+
+/* 标题不留孤字 */
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+p {
+  text-wrap: pretty;
+}
+
+/* Playfair 默认是旧式数字（高低不齐），标题里的数字统一用等高数字 */
+.font-serif {
+  font-feature-settings: "lnum" 1;
 }
 
 /* 价格数字等宽对齐 */
 .price {
   font-variant-numeric: tabular-nums;
+}
+
+/* 计算器滑块：已选部分深绿，未选部分浅灰，圆形滑块 */
+.range {
+  appearance: none;
+  height: 22px;
+  background: transparent;
+  cursor: pointer;
+}
+.range:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 4px;
+}
+.range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 9999px;
+  background: linear-gradient(to right, var(--color-accent) var(--fill), var(--color-rule) var(--fill));
+}
+.range::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -7px;
+  border-radius: 50%;
+  border: 2px solid var(--color-accent);
+  background: var(--color-paper);
+}
+.range::-moz-range-track {
+  height: 4px;
+  border-radius: 9999px;
+  background: var(--color-rule);
+}
+.range::-moz-range-progress {
+  height: 4px;
+  border-radius: 9999px;
+  background: var(--color-accent);
+}
+.range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--color-accent);
+  background: var(--color-paper);
+}
+
+/* 去掉 Safari 的 details 默认三角 */
+.faq summary::-webkit-details-marker {
+  display: none;
 }
