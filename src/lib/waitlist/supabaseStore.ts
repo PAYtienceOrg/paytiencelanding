@@ -46,7 +46,7 @@ export class SupabaseWaitlistStore implements WaitlistStore {
           throw new ReferralCodeConflictError();
         }
       }
-      throw new Error("Waitlist storage request failed.");
+      throw new Error(`Waitlist storage request failed (join, HTTP ${response.status}).`);
     }
     return joinResultSchema.parse(await response.json());
   }
@@ -56,7 +56,7 @@ export class SupabaseWaitlistStore implements WaitlistStore {
       method: "HEAD",
       headers: { Prefer: "count=exact" },
     });
-    if (!response.ok) throw new Error("Waitlist storage request failed.");
+    if (!response.ok) throw new Error(`Waitlist storage request failed (count, HTTP ${response.status}).`);
     const match = /^(?:\d+-\d+|\*)\/(\d+)$/.exec(response.headers.get("content-range") ?? "");
     const total = match ? Number(match[1]) : NaN;
     if (!Number.isSafeInteger(total)) throw new Error("Invalid waitlist count response.");

@@ -12,6 +12,12 @@ const signupSchema = z.object({
 
 type ErrorResult = { status: 400 | 429 | 503; body: { error: string } };
 type SignupResult = { status: 200 | 201; body: WaitlistData } | ErrorResult;
+// 只在服务器日志里记录原因（状态码和错误类型），不含邮箱、密钥或数据库返回的内容
+function logStorageError(operation: string, error: unknown) {
+  const reason = error instanceof Error ? `${error.name}: ${error.message}` : "unknown error";
+  console.error(`[waitlist] ${operation} failed — ${reason}`);
+}
+
 const unavailable: ErrorResult = {
   status: 503,
   body: { error: "Waitlist is temporarily unavailable. Please try again." },
@@ -68,7 +74,10 @@ export class WaitlistService {
         });
         return { status: created ? 201 : 200, body };
       } catch (error) {
-        if (!(error instanceof ReferralCodeConflictError)) return unavailable;
+        if (!(error instanceof ReferralCodeConflictError)) {
+          logStorageError("join", error);
+          return unavailable;
+        }
       }
     }
     return unavailable;
@@ -77,7 +86,8 @@ export class WaitlistService {
   async count(): Promise<{ status: 200; body: { total: number } } | ErrorResult> {
     try {
       return { status: 200, body: { total: await this.store.count() } };
-    } catch {
+    } catch (error) {
+      logStorageError("count", error);
       return unavailable;
     }
   }
