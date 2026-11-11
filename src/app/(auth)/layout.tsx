@@ -10,7 +10,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           <Link href="/" className="font-serif text-2xl font-bold tracking-tight">
             Paytience
           </Link>
-          <Link href="/" className="text-sm underline-offset-4 hover:underline">
+          <Link href="/" className="inline-flex min-h-11 items-center text-sm underline-offset-4 hover:underline">
             ← Back to home
           </Link>
         </div>

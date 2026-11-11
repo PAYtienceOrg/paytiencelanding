@@ -21,8 +21,6 @@ import { Faq } from "./Faq";
 import { GoodToKnow } from "./GoodToKnow";
 import { HowItWorks } from "./HowItWorks";
 import { MobileNav } from "./MobileNav";
-import { TwoOutcomes } from "./TwoOutcomes";
-import { WhyWait } from "./WhyWait";
 
 afterEach(cleanup);
 
@@ -40,22 +38,6 @@ describe("HowItWorks", () => {
 
   it("文案不含禁用词", () => {
     const { container } = render(<HowItWorks />);
-    expect(container.textContent).not.toMatch(banned);
-  });
-});
-
-describe("TwoOutcomes", () => {
-  it("并排显示两种结果和金额", () => {
-    render(<TwoOutcomes />);
-    expect(screen.getByRole("heading", { name: "Two outcomes. Zero guesswork." })).toBeTruthy();
-    expect(screen.getByText("Price hits $2,400")).toBeTruthy();
-    expect(screen.getByText("Price stays above")).toBeTruthy();
-    expect(screen.getByText("$12,000")).toBeTruthy();
-    expect(screen.getByText("You get 5 ETH at $2,400")).toBeTruthy();
-  });
-
-  it("文案不含禁用词", () => {
-    const { container } = render(<TwoOutcomes />);
     expect(container.textContent).not.toMatch(banned);
   });
 });
@@ -90,7 +72,8 @@ describe("Simulator", () => {
 
   it("拖价格、改数量和天数后结果跟着变", () => {
     render(<Simulator />);
-    fireEvent.change(screen.getByLabelText("Your price"), { target: { value: "10" } });
+    // 滑块值是负的折扣：-10 = 比现价低 10%
+    fireEvent.change(screen.getByLabelText("Your price"), { target: { value: "-10" } });
     fireEvent.change(screen.getByLabelText("How much"), { target: { value: "2" } });
     fireEvent.click(screen.getByRole("button", { name: "7 days" }));
     expect(commit()).toBe("$4,500");
@@ -98,17 +81,30 @@ describe("Simulator", () => {
     expect(screen.getByText("Target reached on day 5")).toBeTruthy();
   });
 
+  it("价格滑块往右是更高的价格，两端显示价格", () => {
+    render(<Simulator />);
+    const slider = screen.getByLabelText("Your price") as HTMLInputElement;
+    expect(screen.getByText("$2,000")).toBeTruthy(); // 左端：低 20%
+    expect(screen.getByText("$2,475")).toBeTruthy(); // 右端：低 1%
+    fireEvent.change(slider, { target: { value: slider.max } });
+    expect(commit()).toBe("$12,375"); // 5 × $2,475
+  });
+
+  it("同时列出两种结果", () => {
+    render(<Simulator />);
+    expect(screen.getByText("If ETH hits $2,400 within 3 days")).toBeTruthy();
+    expect(screen.getByText("You get 5 ETH")).toBeTruthy();
+    expect(screen.getByText("$12,000 back")).toBeTruthy();
+  });
+
+  it("按钮都够大，手机上好点", () => {
+    render(<Simulator />);
+    for (const b of screen.getAllByRole("button")) expect(b.className).toMatch(/min-h-11/);
+  });
+
   it("文案不含禁用词", () => {
     const { container } = render(<Simulator />);
     fireEvent.click(screen.getByRole("button", { name: /Price rises/ }));
-    expect(container.textContent).not.toMatch(banned);
-  });
-});
-
-describe("WhyWait", () => {
-  it("三条理由", () => {
-    const { container } = render(<WhyWait />);
-    expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(3);
     expect(container.textContent).not.toMatch(banned);
   });
 });

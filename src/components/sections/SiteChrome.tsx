@@ -34,10 +34,10 @@ export function SiteHeader() {
             ))}
           </ul>
           <span aria-hidden className="hidden h-5 w-px bg-ink md:block" />
-          <Link href="/login" className="hidden font-semibold underline-offset-4 hover:underline sm:inline">
+          <Link href="/login" className="hidden min-h-11 items-center font-semibold underline-offset-4 hover:underline sm:inline-flex">
             Log in
           </Link>
-          <JoinLink className="bg-accent px-4 py-2 text-sm font-semibold text-paper transition-colors hover:bg-ink">
+          <JoinLink className="inline-flex min-h-11 items-center bg-accent px-4 text-sm font-semibold text-paper transition-colors hover:bg-ink">
             Join the waitlist
           </JoinLink>
           <MobileNav links={[...links, { href: "/login", label: "Log in" }]} />
@@ -86,8 +86,10 @@ export function EarlyAccess() {
           <JoinLink className="bg-paper px-6 py-3 text-sm font-semibold text-accent transition-colors hover:bg-white">
             Join the waitlist
           </JoinLink>
-          <Link href="/login" className="text-sm underline-offset-4 hover:underline">
-            Already on the list? <span className="font-semibold">Log in</span>
+          <Link href="/login" className="inline-flex min-h-11 items-center text-sm underline-offset-4 hover:underline">
+            <span>
+              Already on the list? <span className="font-semibold">Log in</span>
+            </span>
           </Link>
         </div>
       </div>

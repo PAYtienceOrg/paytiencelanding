@@ -43,7 +43,7 @@ export function SignUpForm({ referral }: { referral?: string }) {
       </form>
       <p className="mt-6 text-sm">
         Already have an account?{" "}
-        <Link href="/login" className="font-semibold text-accent underline-offset-4 hover:underline">
+        <Link href="/login" className="inline-flex min-h-11 items-center font-semibold text-accent underline-offset-4 hover:underline">
           Log in
         </Link>
       </p>
@@ -122,7 +122,7 @@ export function ForgotPasswordForm() {
         {state.status !== "sent" && <SubmitButton pending="Sending…">Send reset link</SubmitButton>}
       </form>
       <p className="mt-6 text-sm">
-        <Link href="/login" className="font-semibold text-accent underline-offset-4 hover:underline">
+        <Link href="/login" className="inline-flex min-h-11 items-center font-semibold text-accent underline-offset-4 hover:underline">
           ← Back to log in
         </Link>
       </p>

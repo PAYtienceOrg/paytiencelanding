@@ -22,7 +22,7 @@ export function MobileNav({ links }: { links: Link[] }) {
         aria-expanded={open}
         aria-controls="mobile-nav"
         onClick={() => setOpen((v) => !v)}
-        className="flex h-9 w-9 items-center justify-center border border-ink"
+        className="flex h-11 w-11 items-center justify-center border border-ink"
       >
         <span className="sr-only">{open ? "Close menu" : "Open menu"}</span>
         <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.75} aria-hidden>

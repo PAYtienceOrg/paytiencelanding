@@ -14,7 +14,9 @@ export function Reveal({ children, delay = 0, className }: RevealProps) {
   const reduce = useReducedMotion();
   if (reduce) return <div className={className}>{children}</div>;
   return (
+    // data-reveal：没有 JS 时 layout.tsx 里的 noscript 样式让它直接显示
     <motion.div
+      data-reveal
       className={className}
       initial={{ opacity: 0, y: 24 }}
       whileInView={{ opacity: 1, y: 0 }}
