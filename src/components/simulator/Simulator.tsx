@@ -86,7 +86,6 @@ export function Simulator() {
       <div className="mx-auto max-w-6xl px-6">
         <SectionHeading
           id="simulator-title"
-          label="Try it"
           title="See how your order plays out."
           intro="Pick a coin, an amount and your price. Then watch what happens if the market drops — or rises."
         />
@@ -170,7 +169,7 @@ export function Simulator() {
                 </div>
                 <div className="flex items-baseline justify-between gap-4 py-3">
                   <dt>If it doesn&apos;t</dt>
-                  <dd className="shrink-0 font-serif text-lg font-bold tabular-nums">{formatMoney(total)} back</dd>
+                  <dd className="shrink-0 font-serif text-lg font-bold tabular-nums text-refund">{formatMoney(total)} back</dd>
                 </div>
               </dl>
             </div>
@@ -228,8 +227,8 @@ export function Simulator() {
                     <p className="mt-1 text-sm text-ink/80">You pay {formatMoney(total)} — exactly the price you set.</p>
                   </motion.div>
                 ) : scenario === "rise" && done ? (
-                  <motion.div key="refund" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="border-l-4 border-ink bg-white/60 px-4 py-3">
-                    <p className={eyebrow}>Deadline reached · target not hit</p>
+                  <motion.div key="refund" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="border-l-4 border-refund bg-refund-tint px-4 py-3">
+                    <p className={`${eyebrow} text-refund`}>Deadline reached, target not hit</p>
                     <p className="mt-1 font-serif text-2xl font-bold">{formatMoney(total)} refunded in full</p>
                     <p className="mt-1 text-sm text-ink/80">
                       {coinId} ended the window at {formatMoney(endPrice)}, above your {formatMoney(target)} target.
@@ -251,7 +250,7 @@ export function Simulator() {
                 {done ? final : ""}
               </p>
             </div>
-            <p className="border-t border-ink/30 px-4 py-2 text-[11px] text-ink/60">
+            <p className="border-t border-ink/30 px-4 py-2 text-xs text-ink/60">
               Simulated example with illustrative prices — not live market data or a prediction. Crypto prices can move in either direction.
             </p>
           </div>

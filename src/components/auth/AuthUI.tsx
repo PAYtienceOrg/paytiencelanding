@@ -4,7 +4,7 @@ import { useState, type InputHTMLAttributes, type ReactNode, type Ref } from "re
 import { useFormStatus } from "react-dom";
 import type { FormState } from "../../lib/auth/actions";
 
-const label = "text-[11px] font-semibold uppercase tracking-[0.2em]";
+const label = "text-sm font-semibold";
 const input = "w-full border border-ink/40 bg-white/60 px-3 py-2.5 text-base placeholder:text-ink/40 focus:border-accent";
 
 export function Field({

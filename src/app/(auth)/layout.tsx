@@ -11,7 +11,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
             Paytience
           </Link>
           <Link href="/" className="inline-flex min-h-11 items-center text-sm underline-offset-4 hover:underline">
-            ← Back to home
+            Back to home
           </Link>
         </div>
       </header>
