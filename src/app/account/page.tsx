@@ -9,7 +9,7 @@ import { getWaitlistService } from "../../lib/waitlist/service";
 
 export const metadata: Metadata = { title: "My account · Paytience" };
 
-const eyebrow = "text-[11px] font-semibold uppercase tracking-[0.2em]";
+const eyebrow = "text-sm font-semibold";
 
 export default async function AccountPage({ searchParams }: { searchParams: Promise<{ updated?: string }> }) {
   const user = await getCurrentUser();

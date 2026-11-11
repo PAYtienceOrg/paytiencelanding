@@ -34,7 +34,6 @@ export function Faq() {
       <div className="grid gap-8 md:grid-cols-[1fr_1.6fr] md:gap-12">
         <SectionHeading
           id="faq-title"
-          label="Questions"
           title="Frequently asked questions"
           intro="Short answers to what people ask most before setting a price."
         />

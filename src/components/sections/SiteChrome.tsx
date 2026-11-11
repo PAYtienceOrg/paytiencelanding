@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { JoinLink } from "../waitlist/JoinLink";
 import { MobileNav } from "./MobileNav";
-import { eyebrow } from "./SectionHeading";
 
 const links = [
   { href: "#how-it-works", label: "How it works" },
@@ -61,8 +60,7 @@ export function EarlyAccess() {
       <div className="mx-auto max-w-6xl px-6">
         <div className="grid gap-8 md:grid-cols-[1fr_1.4fr] md:items-end md:gap-12">
           <div>
-            <p className={`${eyebrow} text-paper/80`}>Early access</p>
-            <h2 id="early-access-title" className="mt-2 font-serif text-3xl font-bold leading-tight sm:text-4xl">
+            <h2 id="early-access-title" className="font-serif text-3xl font-bold leading-tight sm:text-4xl">
               We&apos;re opening Paytience in waves.
             </h2>
           </div>

@@ -66,7 +66,7 @@ export function HeroChart() {
       <div className="flex items-end justify-between gap-4">
         <p className="font-serif text-2xl font-bold">ETH / USD</p>
         <div className="text-right">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em]">Example price</p>
+          <p className="text-sm font-semibold">Example price</p>
           <p className="font-serif text-3xl font-bold tabular-nums text-accent">{formatMoney(COIN.price)}</p>
         </div>
       </div>
@@ -95,7 +95,7 @@ export function HeroChart() {
       <p
         aria-live="polite"
         className={`mt-2 min-h-12 border-l-4 px-3 py-2 text-sm font-semibold transition-colors ${
-          result?.tone === "fill" ? "border-accent bg-mint" : result ? "border-ink bg-white/50" : "border-transparent text-ink/60"
+          result?.tone === "fill" ? "border-accent bg-mint" : result ? "border-refund bg-refund-tint" : "border-transparent text-ink/60"
         }`}
       >
         {result ? result.text : <span aria-hidden>Watching ETH at {formatMoney(priceAt(path.prices, progress))}…</span>}
@@ -106,7 +106,7 @@ export function HeroChart() {
           Example: {formatAmount(AMOUNT, COIN.id)}, {formatMoney(TARGET)} target, {DAYS}-day window.
         </span>
         <a href="#simulator" className="inline-flex min-h-11 items-center font-semibold text-accent underline-offset-4 hover:underline">
-          Try your own numbers ↓
+          Try your own numbers
         </a>
       </p>
     </div>

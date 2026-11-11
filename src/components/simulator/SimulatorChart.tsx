@@ -121,7 +121,7 @@ export function SimulatorChart({ coin, path, target, scenario, days, progress, n
           />
           <circle cx={x(hitIndex)} cy={ty} r={6} className="fill-accent" />
           <motion.g {...pop} style={{ originX: `${x(hitIndex)}px`, originY: `${ty}px` }}>
-            <rect x={x(hitIndex) - 78} y={ty + 30} width={156} height={30} className="fill-accent" />
+            <rect x={x(hitIndex) - 86} y={ty + 30} width={172} height={30} className="fill-accent" />
             <text x={x(hitIndex)} y={ty + 50} textAnchor="middle" className="fill-paper text-[14px] font-semibold tabular-nums">
               Filled at {formatMoney(target)}
             </text>
@@ -133,11 +133,11 @@ export function SimulatorChart({ coin, path, target, scenario, days, progress, n
       {/* 到期没碰到：退款 */}
       {refunded && (
         <motion.g {...pop} style={{ originX: `${RIGHT}px`, originY: `${ty}px` }}>
-          <line x1={RIGHT} x2={RIGHT} y1={TOP} y2={BOTTOM} className="stroke-ink" strokeWidth={1} strokeDasharray="3 4" />
-          <circle cx={RIGHT} cy={y(prices[POINTS - 1])} r={5} className="fill-ink" />
-          <rect x={RIGHT - 168} y={ty + 30} width={162} height={30} className="fill-paper stroke-ink" strokeWidth={1.25} />
-          <text x={RIGHT - 87} y={ty + 50} textAnchor="middle" className="fill-ink text-[14px] font-semibold">
-            Deadline · refunded
+          <line x1={RIGHT} x2={RIGHT} y1={TOP} y2={BOTTOM} className="stroke-refund" strokeWidth={1} strokeDasharray="3 4" />
+          <circle cx={RIGHT} cy={y(prices[POINTS - 1])} r={5} className="fill-refund" />
+          <rect x={RIGHT - 186} y={ty + 30} width={180} height={30} className="fill-refund-tint stroke-refund" strokeWidth={1.25} />
+          <text x={RIGHT - 96} y={ty + 50} textAnchor="middle" className="fill-refund text-[14px] font-semibold">
+            Refunded at deadline
           </text>
         </motion.g>
       )}

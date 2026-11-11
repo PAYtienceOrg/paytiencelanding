@@ -25,11 +25,10 @@ export default function Home() {
       <SiteHeader />
 
       <main id="main">
-        <div id="top" className="mx-auto max-w-6xl divide-y divide-ink px-6">
+        <div id="top" className="mx-auto max-w-6xl divide-y divide-rule px-6">
           <section aria-labelledby="hero-title" className="grid gap-10 py-10 md:grid-cols-[1fr_1fr] md:gap-0 md:py-12">
             <div className="md:pr-10">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-accent">Buy crypto on your terms</p>
-              <h1 id="hero-title" className="mt-3 font-serif text-5xl font-bold leading-[1.05] tracking-tight sm:text-6xl">
+              <h1 id="hero-title" className="font-serif text-4xl font-semibold leading-[1.05] tracking-tight sm:text-6xl">
                 Name your price. Get it — or get refunded.
               </h1>
               <p className="mt-5 max-w-md text-base leading-relaxed text-ink/85">
@@ -64,7 +63,7 @@ export default function Home() {
 
         <Simulator />
 
-        <div className="mx-auto max-w-6xl divide-y divide-ink px-6">
+        <div className="mx-auto max-w-6xl divide-y divide-rule px-6">
           <GoodToKnow />
           <Faq />
         </div>

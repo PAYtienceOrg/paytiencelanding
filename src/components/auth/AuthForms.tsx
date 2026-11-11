@@ -123,7 +123,7 @@ export function ForgotPasswordForm() {
       </form>
       <p className="mt-6 text-sm">
         <Link href="/login" className="inline-flex min-h-11 items-center font-semibold text-accent underline-offset-4 hover:underline">
-          ← Back to log in
+          Back to log in
         </Link>
       </p>
     </>
