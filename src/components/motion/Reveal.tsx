@@ -9,12 +9,12 @@ type RevealProps = {
   className?: string;
 };
 
-// 滚动进入视口时淡入并上移 24px，只播一次。
+// Fades in and moves up 24px when scrolled into view; plays once.
 export function Reveal({ children, delay = 0, className }: RevealProps) {
   const reduce = useReducedMotion();
   if (reduce) return <div className={className}>{children}</div>;
   return (
-    // data-reveal：没有 JS 时 layout.tsx 里的 noscript 样式让它直接显示
+    // data-reveal: without JS, the noscript style in layout.tsx shows it right away
     <motion.div
       data-reveal
       className={className}

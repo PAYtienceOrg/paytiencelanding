@@ -1,13 +1,13 @@
 "use client";
 
 import { animate, useReducedMotion } from "framer-motion";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState, type RefObject } from "react";
 
 const DURATION = 3.2;
 const DELAY_MS = 300;
 
-// 动画进度 0..1。runKey 一变就从头播放；进度和 runKey 绑定，旧进度自动作废（显示为 0）。
-// enabled 为 false（还没滚到）时停在 0；系统开了“减少动画”时直接是 1。
+// Animation progress 0..1. Restarts whenever runKey changes; progress is tied to runKey, so stale progress is discarded (reads as 0).
+// Stays at 0 while enabled is false (not scrolled into view yet); with the system's reduced-motion setting it is 1 right away.
 export function usePlayback(runKey: string, enabled: boolean, duration = DURATION) {
   const reduce = useReducedMotion();
   const [run, setRun] = useState({ key: "", p: 0 });
@@ -15,7 +15,7 @@ export function usePlayback(runKey: string, enabled: boolean, duration = DURATIO
   useEffect(() => {
     if (!enabled || reduce) return;
     let controls: { stop: () => void } | undefined;
-    // 稍等一下再开始，拖滑块时不会每一格都重播
+    // Wait a moment before starting so dragging the slider does not replay on every step
     const t = window.setTimeout(() => {
       controls = animate(0, 1, { duration, ease: "linear", onUpdate: (p) => setRun({ key: runKey, p }) });
     }, DELAY_MS);
@@ -29,16 +29,22 @@ export function usePlayback(runKey: string, enabled: boolean, duration = DURATIO
   return run.key === runKey ? run.p : 0;
 }
 
-// 屏幕是否窄于 640px（服务端默认按宽屏渲染）
-const NARROW = "(max-width: 639px)";
-const isNarrow = () => typeof window.matchMedia === "function" && window.matchMedia(NARROW).matches;
-const subscribeNarrow = (cb: () => void) => {
-  if (typeof window.matchMedia !== "function") return () => {};
-  const mq = window.matchMedia(NARROW);
-  mq.addEventListener("change", cb);
-  return () => mq.removeEventListener("change", cb);
-};
+// Whether the chart's container is too narrow for the wide canvas. Measured on the
+// container, not the viewport: in the two-column hero on tablets the chart is only
+// ~320px wide even though the screen is not, and the wide canvas would shrink its
+// labels to an unreadable size. Renders wide until measured (and on the server).
+const NARROW_BELOW = 460;
 
-export function useNarrow() {
-  return useSyncExternalStore(subscribeNarrow, isNarrow, () => false);
+export function useNarrow(ref: RefObject<HTMLElement | null>) {
+  const [narrow, setNarrow] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver !== "function") return;
+    const observer = new ResizeObserver(([entry]) => setNarrow(entry.contentRect.width < NARROW_BELOW));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [ref]);
+
+  return narrow;
 }

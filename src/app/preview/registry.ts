@@ -3,7 +3,7 @@ import { MotionPreview } from "@/components/motion/MotionPreview";
 import { HowItWorks } from "@/components/sections/HowItWorks";
 import { Simulator } from "@/components/simulator/Simulator";
 
-// 名字 -> 预览组件。后面的卡把自己的组件加进来。
+// Name -> preview component. Add new components here to preview them.
 export const registry: Record<string, ComponentType> = {
   motion: MotionPreview,
   "how-it-works": HowItWorks,

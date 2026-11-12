@@ -1,4 +1,4 @@
-// 模拟器用的纯函数：币种、示例价格、走势生成、格式化。不依赖 React，方便测试。
+// Pure functions for the simulator: coins, example prices, path generation, formatting. No React dependency, so they are easy to test.
 
 export type CoinId = "ETH" | "BTC" | "SOL";
 export type Scenario = "drop" | "rise";
@@ -6,7 +6,7 @@ export type Scenario = "drop" | "rise";
 export type Coin = {
   id: CoinId;
   name: string;
-  price: number; // 示例现价，不是实时行情
+  price: number; // example price, not live market data
   amounts: number[];
   defaultAmount: number;
 };
@@ -23,9 +23,9 @@ export const DISCOUNT_MIN = 1;
 export const DISCOUNT_MAX = 20;
 export const WINDOWS = [1, 3, 7];
 
-// 走势一共多少个点
+// Number of points in a price path
 export const POINTS = 48;
-// 下跌情景里，第几个点碰到目标价
+// Index of the point where the drop scenario hits the target
 export const HIT_INDEX = Math.round((POINTS - 1) * 0.62);
 
 const cents = (n: number) => Math.round(n * 100) / 100;
@@ -40,14 +40,14 @@ export function formatAmount(n: number, coin: CoinId) {
   return `${n.toLocaleString("en-US", { maximumFractionDigits: 4 })} ${coin}`;
 }
 
-// 固定的“噪声”，每次结果都一样（服务端和客户端渲染一致）。范围约 -1..1。
+// Deterministic "noise": the same result every time (server and client render alike). Range is roughly -1..1.
 const wiggle = (i: number) => Math.sin(i * 1.9) * 0.55 + Math.sin(i * 0.7 + 0.8) * 0.45;
 
 export type Path = { prices: number[]; hitIndex: number | null };
 
-// 生成示例走势。
-// drop：价格一路往下，在 HIT_INDEX 第一次碰到目标价，之后小幅反弹。
-// rise：价格整体上涨，始终在目标价之上，到期没有成交。
+// Builds an example price path.
+// drop: the price falls, first touches the target at HIT_INDEX, then rebounds slightly.
+// rise: the price trends up, always above the target, and the order is not filled by the deadline.
 export function buildPath(price: number, target: number, scenario: Scenario): Path {
   const gap = Math.max(price - target, price * 0.005);
   const prices: number[] = [];
@@ -60,7 +60,7 @@ export function buildPath(price: number, target: number, scenario: Scenario): Pa
       } else if (i < HIT_INDEX) {
         const t = i / HIT_INDEX;
         const p = price - gap * Math.pow(t, 1.35) + wiggle(i) * amp * Math.sqrt(1 - t);
-        // 碰到之前必须一直在目标价之上；也不高过起点，免得挡住 “Now” 标签
+        // Must stay above the target until the hit, and never above the start so it does not cover the "Now" label
         prices.push(cents(Math.min(Math.max(p, target + gap * 0.03), price)));
       } else if (i === HIT_INDEX) {
         prices.push(target);
@@ -81,16 +81,16 @@ export function buildPath(price: number, target: number, scenario: Scenario): Pa
       continue;
     }
     const t = i / (POINTS - 1);
-    // 前段先小幅回落，再一路往上
+    // A small dip early on, then a steady climb
     const p = price + climb * Math.pow(t, 1.2) - gap * 0.35 * Math.sin(Math.PI * Math.min(t * 2, 1)) + wiggle(i) * amp;
     const floor = Math.max(p, target + gap * 0.45);
-    // 前 30% 不高过起点，给 “Now” 标签留位置
+    // Never above the start in the first 30%, leaving room for the "Now" label
     prices.push(cents(t < 0.3 ? Math.min(floor, price) : floor));
   }
   return { prices, hitIndex: null };
 }
 
-// 纵轴刻度：取 3~5 个整齐的数字
+// Y-axis ticks: three to five round numbers
 export function niceTicks(lo: number, hi: number, count = 4) {
   const raw = (hi - lo) / count;
   const mag = Math.pow(10, Math.floor(Math.log10(raw)));
@@ -101,7 +101,7 @@ export function niceTicks(lo: number, hi: number, count = 4) {
   return ticks;
 }
 
-// 进度 progress（0..1）时的价格，在相邻两点之间插值
+// Price at the given progress (0..1), interpolated between neighbouring points
 export function priceAt(prices: number[], progress: number) {
   const f = Math.min(Math.max(progress, 0), 1) * (prices.length - 1);
   const i0 = Math.floor(f);
@@ -109,5 +109,5 @@ export function priceAt(prices: number[], progress: number) {
   return prices[i0] + (prices[i1] - prices[i0]) * (f - i0);
 }
 
-// 第几天成交（从 1 开始）
+// Day of the fill (1-based)
 export const fillDay = (hitIndex: number, days: number) => Math.max(1, Math.ceil((hitIndex / (POINTS - 1)) * days));

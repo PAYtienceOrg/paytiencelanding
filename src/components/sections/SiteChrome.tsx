@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { JoinLink } from "../waitlist/JoinLink";
+import { WaitlistForm } from "../waitlist/WaitlistForm";
 import { MobileNav } from "./MobileNav";
 
 const links = [
@@ -33,13 +33,13 @@ export function SiteHeader() {
             ))}
           </ul>
           <span aria-hidden className="hidden h-5 w-px bg-ink md:block" />
-          <Link href="/login" className="hidden min-h-11 items-center font-semibold underline-offset-4 hover:underline sm:inline-flex">
-            Log in
-          </Link>
-          <JoinLink className="inline-flex min-h-11 items-center bg-accent px-4 text-sm font-semibold text-paper transition-colors hover:bg-ink">
-            Join the waitlist
+          <JoinLink className="inline-flex min-h-11 items-center whitespace-nowrap bg-accent px-4 text-sm font-semibold text-paper transition-colors hover:bg-ink">
+            {/* On very narrow phones only "Join" is visible so the header stays on one line; screen readers still get the full name. */}
+            <span>
+              Join<span className="max-[399px]:sr-only"> the waitlist</span>
+            </span>
           </JoinLink>
-          <MobileNav links={[...links, { href: "/login", label: "Log in" }]} />
+          <MobileNav links={links} />
         </nav>
       </div>
     </header>
@@ -47,13 +47,13 @@ export function SiteHeader() {
 }
 
 const accessSteps = [
-  { n: "01", title: "Create an account", body: "Sign up and confirm your email to get your place in line." },
+  { n: "01", title: "Join with your email", body: "Enter your email below to get your place in line. No account or password." },
   { n: "02", title: "Move up the line", body: "Share your invite link. Each friend who joins lifts you five places." },
   { n: "03", title: "Get let in", body: "We open access in waves, in waitlist order, and email you when it's your turn." },
-  { n: "04", title: "Set your first price", body: "Your account is switched on and you can place your first order." },
+  { n: "04", title: "Set your first price", body: "Your invite lets you in and you can place your first order." },
 ];
 
-// 页面底部：说明候补名单是分批放人进来的，只有一个按钮。
+// Bottom of the page: explains that the waitlist lets people in gradually, and holds the one sign-up form.
 export function EarlyAccess() {
   return (
     <section id="early-access" aria-labelledby="early-access-title" className="scroll-mt-16 bg-accent py-16 text-paper">
@@ -66,7 +66,7 @@ export function EarlyAccess() {
           </div>
           <p className="text-base leading-relaxed text-paper/85">
             To handle every order with care, we let people in gradually from the waitlist. Your place in line decides when
-            your account is switched on.
+            you get in.
           </p>
         </div>
 
@@ -80,15 +80,8 @@ export function EarlyAccess() {
           ))}
         </ol>
 
-        <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3">
-          <JoinLink className="bg-paper px-6 py-3 text-sm font-semibold text-accent transition-colors hover:bg-white">
-            Join the waitlist
-          </JoinLink>
-          <Link href="/login" className="inline-flex min-h-11 items-center text-sm underline-offset-4 hover:underline">
-            <span>
-              Already on the list? <span className="font-semibold">Log in</span>
-            </span>
-          </Link>
+        <div className="mt-10">
+          <WaitlistForm />
         </div>
       </div>
     </section>
@@ -104,10 +97,10 @@ export function SiteFooter() {
           <p className="mt-2 text-sm text-ink/80">Name your price for crypto. Get it, or get your money back.</p>
         </div>
         <nav aria-label="Footer">
-          <ul className="grid grid-cols-2 gap-x-10 gap-y-2 text-sm">
+          <ul className="grid grid-cols-2 gap-x-10 text-sm">
             {links.map((l) => (
               <li key={l.href}>
-                <a href={l.href} className="underline-offset-4 hover:underline">
+                <a href={l.href} className="inline-flex min-h-11 items-center underline-offset-4 hover:underline">
                   {l.label}
                 </a>
               </li>
@@ -119,21 +112,7 @@ export function SiteFooter() {
         Paytience is in early access and opening gradually from the waitlist. Examples on this page are for illustration only and are not investment advice.
         Crypto prices are volatile and can move in either direction.
       </p>
-      <ul className="mt-4 flex flex-wrap items-center gap-4 text-xs">
-        <li>© 2026 Paytience</li>
-        <li aria-hidden className="h-4 w-px bg-ink" />
-        <li>
-          <a href="/privacy" className="underline-offset-4 hover:underline">
-            Privacy
-          </a>
-        </li>
-        <li aria-hidden className="h-4 w-px bg-ink" />
-        <li>
-          <a href="/terms" className="underline-offset-4 hover:underline">
-            Terms
-          </a>
-        </li>
-      </ul>
+      <p className="mt-4 text-xs">© 2026 Paytience</p>
     </footer>
   );
 }

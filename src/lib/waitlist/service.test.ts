@@ -231,32 +231,33 @@ describe("waitlist HTTP routes", () => {
   });
   afterEach(() => vi.unstubAllEnvs());
 
-  it("count route reflects members who joined after signing up", async () => {
+  it("shares the signup store with the count route and returns JSON statuses", async () => {
+    const { POST } = await import("../../app/api/waitlist/route");
     const { GET } = await import("../../app/api/waitlist/count/route");
-    const { getWaitlistService } = await import("./service");
     expect(await (await GET()).json()).toEqual({ total: 0 });
-    await getWaitlistService().joinMember("member@example.com");
+    const request = () => new Request("http://localhost/api/waitlist", {
+      method: "POST", body: JSON.stringify({ email: "api@example.com" }),
+      headers: { "x-forwarded-for": "192.0.2.1, 10.0.0.1" },
+    });
+    const created = await POST(request());
+    expect(created.status).toBe(201);
+    expect(await created.json()).toMatchObject({ position: 1, total: 1 });
+    expect((await POST(request())).status).toBe(200);
     const count = await GET();
     expect(count.headers.get("cache-control")).toContain("no-store");
     expect(await count.json()).toEqual({ total: 1 });
   });
-});
 
-describe("joinMember (signed-in users)", () => {
-  it("joins once, ignores bad referral codes and is not rate limited", async () => {
-    const service = new WaitlistService(new MemoryWaitlistStore());
-    const first = await service.joinMember("a@example.com", "not-a-code");
-    expect(first.status).toBe(201);
-    for (let i = 0; i < 8; i++) expect((await service.joinMember("a@example.com")).status).toBe(200);
-  });
-
-  it("applies a valid referral code from the account", async () => {
-    const service = new WaitlistService(new MemoryWaitlistStore());
-    for (const e of ["1@x.com", "2@x.com", "3@x.com"]) await service.joinMember(e);
-    const third = await service.joinMember("3@x.com");
-    if (third.status !== 200) throw new Error("expected existing member");
-    await service.joinMember("new@x.com", third.body.referralCode);
-    const moved = await service.joinMember("3@x.com");
-    expect(moved.status === 200 && moved.body.position).toBe(1);
+  it("counts malformed JSON attempts and returns 429 on the sixth", async () => {
+    const { POST } = await import("../../app/api/waitlist/route");
+    const request = () => new Request("http://localhost/api/waitlist", {
+      method: "POST", body: "{", headers: { "x-real-ip": "192.0.2.2" },
+    });
+    for (let i = 0; i < 5; i++) {
+      const response = await POST(request());
+      expect(response.status).toBe(400);
+      expect(await response.json()).toHaveProperty("error");
+    }
+    expect((await POST(request())).status).toBe(429);
   });
 });

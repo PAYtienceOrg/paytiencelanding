@@ -18,7 +18,7 @@ type StaggerProps = {
   className?: string;
 };
 
-// 子元素（用 StaggerItem 包裹）进入视口后依次出现，间隔 0.08 秒。
+// Children (wrapped in StaggerItem) appear one after another once in view, 0.08s apart.
 export function Stagger({ children, className }: StaggerProps) {
   const reduce = useReducedMotion();
   if (reduce) return <div className={className}>{children}</div>;
@@ -39,7 +39,7 @@ export function StaggerItem({ children, className }: StaggerProps) {
   const reduce = useReducedMotion();
   if (reduce) return <div className={className}>{children}</div>;
   return (
-    // data-reveal：没有 JS 时 layout.tsx 里的 noscript 样式让它直接显示
+    // data-reveal: without JS, the noscript style in layout.tsx shows it right away
     <motion.div className={className} variants={item} data-reveal>
       {children}
     </motion.div>

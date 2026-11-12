@@ -1,7 +1,7 @@
 import type { Config } from "tailwindcss";
 
-// 字号只用 7 级：12 / 14 / 16 / 20 / 28 / 40 / 60。
-// lg 和 xl 合成 20，2xl 和 3xl 合成 28，避免页面上出现太多相近的字号。
+// The type scale has only 7 sizes: 12 / 14 / 16 / 20 / 28 / 40 / 60.
+// lg and xl both map to 20, 2xl and 3xl to 28, to avoid too many near-identical sizes on the page.
 const lead = (size: string, lineHeight: string) => [size, { lineHeight }] as [string, { lineHeight: string }];
 
 const config: Config = {
@@ -11,10 +11,10 @@ const config: Config = {
       colors: {
         paper: "#F7F3EC",
         ink: "#1A1A1A",
-        // 成交：松绿
+        // Filled: pine green
         accent: "#1F4D3A",
         mint: "#E4EBE1",
-        // 退款：回款蓝（和绿色在色盲下也分得开）
+        // Refund: blue (stays distinguishable from the green for colour-blind users)
         refund: "#2D4E86",
         "refund-tint": "#E6ECF5",
         rule: "#D9D3C7",

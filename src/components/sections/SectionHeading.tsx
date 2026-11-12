@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 
-// 表单字段名、小结标题等小号文字：普通大小写，不用全大写加宽字距
+// Small text such as form labels and summary headings: normal case, no all-caps with wide tracking
 export const eyebrow = "text-sm font-semibold";
 
-// 区块标题：衬线大标题 + 可选导语。不在标题上方再加小标签。
+// Section heading: a large serif title plus an optional intro. No small label above the title.
 export function SectionHeading({ id, title, intro }: { id: string; label?: string; title: string; intro?: ReactNode }) {
   return (
     <div className="max-w-2xl">

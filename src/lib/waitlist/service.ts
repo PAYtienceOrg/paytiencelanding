@@ -12,7 +12,7 @@ const signupSchema = z.object({
 
 type ErrorResult = { status: 400 | 429 | 503; body: { error: string } };
 type SignupResult = { status: 200 | 201; body: WaitlistData } | ErrorResult;
-// 只在服务器日志里记录原因（状态码和错误类型），不含邮箱、密钥或数据库返回的内容
+// Logs only the reason (status code and error type) to the server log: no emails, keys or database responses
 function logStorageError(operation: string, error: unknown) {
   const reason = error instanceof Error ? `${error.name}: ${error.message}` : "unknown error";
   console.error(`[waitlist] ${operation} failed — ${reason}`);
@@ -51,12 +51,6 @@ export class WaitlistService {
       return { status: 429, body: { error: "Too many requests. Please try again in a minute." } };
     }
     return this.join(input);
-  }
-
-  // 已验证邮箱的登录用户加入候补名单。不走 IP 限流：只有登录后才能调用，同一邮箱重复调用只返回原名次。
-  async joinMember(email: string, ref?: string): Promise<SignupResult> {
-    const validRef = ref && /^[a-zA-Z0-9]{8}$/.test(ref) ? ref : undefined;
-    return this.join(validRef ? { email, ref: validRef } : { email });
   }
 
   private async join(input: unknown): Promise<SignupResult> {

@@ -8,7 +8,7 @@ vi.mock("framer-motion", async (importOriginal) => ({
   useReducedMotion: () => reduced.value,
 }));
 
-// jsdom 没有 IntersectionObserver；桩永远不触发，组件停在初始状态。
+// jsdom has no IntersectionObserver; the stub never fires, so components stay in their initial state.
 vi.stubGlobal(
   "IntersectionObserver",
   class {
@@ -28,51 +28,51 @@ afterEach(() => {
   reduced.value = true;
 });
 
-describe("减少动画时直接显示最终状态", () => {
-  it("CountUp 直接显示最终值，带 $ 前缀和千分位", () => {
+describe("shows the final state right away with reduced motion", () => {
+  it("CountUp shows the final value with a $ prefix and thousands separators", () => {
     render(<CountUp value={12000} prefix="$" />);
     expect(screen.getByText("$12,000")).toBeTruthy();
   });
 
-  it("CountUp 没有前缀时只加千分位", () => {
+  it("CountUp without a prefix only adds thousands separators", () => {
     render(<CountUp value={1284} />);
     expect(screen.getByText("1,284")).toBeTruthy();
   });
 
-  it("Reveal 直接可见，不带隐藏样式", () => {
-    render(<Reveal>正文</Reveal>);
-    const el = screen.getByText("正文");
+  it("Reveal is visible right away, with no hiding styles", () => {
+    render(<Reveal>Body text</Reveal>);
+    const el = screen.getByText("Body text");
     expect(el.style.opacity).not.toBe("0");
   });
 
-  it("Stagger 的子元素直接可见", () => {
+  it("Stagger children are visible right away", () => {
     render(
       <Stagger>
-        <StaggerItem>一</StaggerItem>
-        <StaggerItem>二</StaggerItem>
+        <StaggerItem>One</StaggerItem>
+        <StaggerItem>Two</StaggerItem>
       </Stagger>,
     );
-    expect(screen.getByText("一").style.opacity).not.toBe("0");
-    expect(screen.getByText("二").style.opacity).not.toBe("0");
+    expect(screen.getByText("One").style.opacity).not.toBe("0");
+    expect(screen.getByText("Two").style.opacity).not.toBe("0");
   });
 
-  it("SplitHeadline 直接可见", () => {
+  it("SplitHeadline is visible right away", () => {
     render(<SplitHeadline text="Name your price." />);
     expect(screen.getByRole("heading", { name: "Name your price." })).toBeTruthy();
     expect(screen.getByText("price.").style.opacity).not.toBe("0");
   });
 });
 
-describe("开启动画时的初始状态", () => {
-  it("CountUp 从 0 开始", () => {
+describe("initial state with motion enabled", () => {
+  it("CountUp starts from 0", () => {
     reduced.value = false;
     render(<CountUp value={12000} prefix="$" />);
     expect(screen.getByText("$0")).toBeTruthy();
   });
 
-  it("Reveal 初始是隐藏的", () => {
+  it("Reveal starts hidden", () => {
     reduced.value = false;
-    render(<Reveal>正文</Reveal>);
-    expect(screen.getByText("正文").style.opacity).toBe("0");
+    render(<Reveal>Body text</Reveal>);
+    expect(screen.getByText("Body text").style.opacity).toBe("0");
   });
 });

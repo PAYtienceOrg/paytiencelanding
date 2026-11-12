@@ -9,7 +9,7 @@ type SplitHeadlineProps = {
   delay?: number;
 };
 
-// 标题按词逐个浮现。整句放在 aria-label 里，逐词的 span 对读屏隐藏。
+// The headline appears word by word. The full sentence is in aria-label; the per-word spans are hidden from screen readers.
 export function SplitHeadline({ text, as: Tag = "h1", className, delay = 0 }: SplitHeadlineProps) {
   const reduce = useReducedMotion();
   const words = text.split(" ");

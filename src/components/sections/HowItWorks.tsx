@@ -4,7 +4,7 @@ const steps = [
   { n: "3", title: "Get crypto or a refund", body: "We fill your order or return your money." },
 ];
 
-// 三个步骤横排，中间用竖线分隔；手机上竖排，用横线分隔。真的是先后顺序，所以保留编号。
+// Three steps in a row with vertical dividers; stacked with horizontal dividers on phones. They really are sequential, so the numbers stay.
 export function HowItWorks() {
   return (
     <section id="how-it-works" aria-labelledby="how-it-works-title" className="scroll-mt-20 py-10">

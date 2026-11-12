@@ -40,13 +40,15 @@ function Field({ label, htmlFor, aside, children }: { label: string; htmlFor?: s
 const choice = (on: boolean) =>
   `min-h-11 border px-3 py-2 text-left transition-colors ${on ? "border-accent bg-accent text-paper" : "border-ink/30 bg-paper hover:border-ink"}`;
 
-// 上手试一试：选币、数量、目标价、等待天数，然后看“跌”和“涨”两种走势的动画和结果。
-// 页面的重点区块：整块浅绿底色，和上下的纸色区块区分开。
+// Try it yourself: pick a coin, amount, target price and waiting period, then watch the animation and result for both the drop and the rise.
+// The page's focal section: a full light-green background sets it apart from the paper-coloured sections around it.
 export function Simulator() {
   const id = useId();
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, amount: 0.4 });
-  const narrow = useNarrow();
+  // Watch the chart itself, not the whole section: stacked on a phone the section is far
+  // taller than the screen, so 40% of it is never visible at once and playback never started.
+  const chartRef = useRef<HTMLDivElement>(null);
+  const inView = useInView(chartRef, { once: true, amount: 0.5 });
+  const narrow = useNarrow(chartRef);
 
   const [coinId, setCoinId] = useState<CoinId>("ETH");
   const [amount, setAmount] = useState(5);
@@ -60,7 +62,7 @@ export function Simulator() {
   const total = Math.round(amount * target * 100) / 100;
   const path = useMemo(() => buildPath(coin.price, target, scenario), [coin.price, target, scenario]);
 
-  // 任何输入变了都重新播放
+  // Replay whenever any input changes
   const progress = usePlayback(`${coinId}|${amount}|${discount}|${days}|${scenario}|${replay}`, inView);
   const done = progress >= 1;
   const filled = scenario === "drop" && path.hitIndex !== null && progress * (POINTS - 1) >= path.hitIndex;
@@ -78,7 +80,7 @@ export function Simulator() {
       ? `Filled: you get ${formatAmount(amount, coinId)} at ${formatMoney(target)}.`
       : `Not filled: ${formatMoney(total)} refunded in full.`;
 
-  // 滑块往右 = 目标价更高（离现价更近）
+  // Slider to the right = higher target price (closer to the current price)
   const sliderFill = ((DISCOUNT_MAX - discount) / (DISCOUNT_MAX - DISCOUNT_MIN)) * 100;
 
   return (
@@ -90,8 +92,8 @@ export function Simulator() {
           intro="Pick a coin, an amount and your price. Then watch what happens if the market drops — or rises."
         />
 
-        <div ref={ref} className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.55fr)] lg:gap-10">
-          {/* 左：选项 + 两种结果 */}
+        <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.55fr)] lg:gap-10">
+          {/* Left: options + both outcomes */}
           <div className="space-y-6">
             <Field label="Coin">
               <div className="grid grid-cols-3 gap-2" role="group" aria-label="Coin">
@@ -154,7 +156,7 @@ export function Simulator() {
               </div>
             </Field>
 
-            {/* 投入金额和两种结果（取代原来单独的 Two outcomes 区块） */}
+            {/* Committed amount and both outcomes (replaces the old standalone Two outcomes section) */}
             <div className="border border-accent bg-paper">
               <div className="flex items-baseline justify-between gap-4 bg-accent px-4 py-3 text-paper">
                 <span className={eyebrow}>You commit</span>
@@ -175,7 +177,7 @@ export function Simulator() {
             </div>
           </div>
 
-          {/* 右：情景切换 + 图 + 结果 */}
+          {/* Right: scenario switch + chart + result */}
           <div className="border border-ink/40 bg-paper">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/30 px-4 py-3">
               <div className="flex border border-ink/40" role="group" aria-label="Market scenario">
@@ -212,7 +214,7 @@ export function Simulator() {
               </button>
             </div>
 
-            <div className="px-2 pt-3 sm:px-4">
+            <div ref={chartRef} className="px-2 pt-3 sm:px-4">
               <SimulatorChart coin={coinId} path={path} target={target} scenario={scenario} days={days} progress={progress} narrow={narrow} />
             </div>
 

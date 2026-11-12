@@ -1,52 +1,61 @@
-# 技术栈
+# Tech stack
 
-## 选型与理由
+## Choices and reasons
 
-| 选型 | 理由 |
+| Choice | Reason |
 | --- | --- |
-| Next.js（App Router、TypeScript、`src/`） | 静态/服务端渲染都支持，路由和字体优化开箱即用 |
-| pnpm | 安装快、依赖严格 |
-| Tailwind CSS | 主题 token 统一颜色和字体，不写散落的 CSS |
-| framer-motion | 唯一的动画库，覆盖入场、滚动、手势 |
-| zod | 表单（如候补名单邮箱）和接口数据校验 |
-| Vitest + @testing-library/react + jsdom | 组件单元测试，速度快 |
-| Playwright | 端到端测试（用例由后续卡片编写） |
+| Next.js (App Router, TypeScript, `src/`) | Static and server rendering, with routing and font optimisation built in |
+| pnpm | Fast installs, strict dependencies |
+| Tailwind CSS | Theme tokens keep colours and fonts consistent, with no scattered CSS |
+| framer-motion | The only animation library; covers entrances, scroll and gestures |
+| zod | Validation for forms and API data |
+| Supabase | Waitlist storage (called over REST with `fetch`, no client library) |
+| Vitest + @testing-library/react + jsdom | Fast component unit tests |
+| Playwright | End-to-end tests (none written yet) |
 
-## 常用命令
+## Commands
 
 ```
-pnpm dev         # 开发服务器 http://localhost:3000
-pnpm build       # 生产构建
+pnpm dev         # development server at http://localhost:3000
+pnpm build       # production build
 pnpm typecheck   # tsc --noEmit
 pnpm lint        # eslint
 pnpm test        # vitest run
 pnpm test:e2e    # playwright test
 ```
 
-## 颜色与字体
+## Colours and fonts
 
-在 `tailwind.config.ts` 中定义：
+Defined in `tailwind.config.ts` (the colours are mirrored as CSS variables in `src/app/globals.css`):
 
-| 类名 | 值 | 用途 |
+| Class | Value | Use |
 | --- | --- | --- |
-| `paper` | `#F7F3EC` | 底色 |
-| `ink` | `#1A1A1A` | 正文 |
-| `accent` | `#1F4D3A` | 深绿强调色 |
-| `rule` | `#D9D3C7` | 细分隔线 |
+| `paper` | `#F7F3EC` | Background |
+| `ink` | `#1A1A1A` | Body text |
+| `accent` | `#1F4D3A` | Pine green: emphasis and filled orders |
+| `mint` | `#E4EBE1` | Light green tint |
+| `refund` | `#2D4E86` | Blue: refunds |
+| `refund-tint` | `#E6ECF5` | Light blue tint |
+| `rule` | `#D9D3C7` | Thin dividers |
 
-- 标题：Playfair Display（`font-serif`，变量 `--font-playfair`）
-- 正文：Inter（`font-sans`，变量 `--font-inter`）
-- 价格数字：加 `tabular-nums`（Tailwind 类）或 `.price` 类
+- Headings and large numbers: Newsreader (`font-serif`, variable `--font-display`)
+- Body and UI: IBM Plex Sans (`font-sans`, variable `--font-sans`)
+- Prices: add `tabular-nums` (Tailwind class) or the `.price` class
+- The type scale has seven sizes: 12 / 14 / 16 / 20 / 28 / 40 / 60
 
-## 目录约定
+## Folder conventions
 
-- `src/components/sections/`：页面区块
-- `src/components/motion/`：通用动画组件
-- `src/app/preview/registry.ts`：预览名到组件的映射；访问 `/preview/<名字>`，生产环境返回 404
+- `src/components/sections/`: page sections
+- `src/components/simulator/`: the price simulator and the hero chart
+- `src/components/motion/`: shared motion components
+- `src/components/waitlist/`: the sign-up form, invite link and counter
+- `src/lib/waitlist/`: the waitlist service and its storage adapters
+- `src/app/preview/registry.ts`: maps a preview name to a component; visit `/preview/<name>` (returns 404 in production)
 
-## 不要引入
+## Do not add
 
-- 其他动画库（如 GSAP）
-- UI 组件库
-- Prisma / Drizzle 等 ORM
+- Other animation libraries (such as GSAP)
+- UI component libraries
+- ORMs such as Prisma or Drizzle
 - CSS-in-JS
+- Accounts or sign-in: the waitlist takes an email address only

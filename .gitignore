@@ -1,4 +1,4 @@
-# 依赖与构建产物
+# Dependencies and build output
 node_modules/
 dist/
 build/
@@ -9,16 +9,16 @@ coverage/
 __pycache__/
 *.tsbuildinfo
 
-# 密钥和本地配置（不要提交）
+# Secrets and local config (never commit)
 .env
 .env.*
 !.env.example
 
-# 系统文件
+# OS files
 .DS_Store
 Thumbs.db
 
-# 部署和本地工具
+# Deployment and local tooling
 .vercel/
 next-env.d.ts
 .claude/

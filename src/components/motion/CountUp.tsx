@@ -14,8 +14,8 @@ const format = (n: number, prefix: string) => `${prefix}${Math.round(n).toLocale
 
 const noop = () => () => {};
 
-// 进入视口后数字从 0 滚动到目标值；减少动画时直接显示最终值。
-// 服务端渲染直接输出最终值，没跑 JS（爬虫、加载慢）时不会显示 $0。
+// Counts up from 0 to the target once in view; with reduced motion it shows the final value right away.
+// Server rendering outputs the final value, so without JS (crawlers, slow loads) it never shows $0.
 export function CountUp({ value, prefix = "", duration = 0.8, className }: CountUpProps) {
   const reduce = useReducedMotion();
   const ref = useRef<HTMLSpanElement>(null);

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+// Read-only invite link with a copy button. Styled for the dark green waitlist section.
 export function CopyLink({ link }: { link: string }) {
   const [copied, setCopied] = useState(false);
   return (
@@ -11,7 +12,7 @@ export function CopyLink({ link }: { link: string }) {
         value={link}
         aria-label="Your invite link"
         onFocus={(e) => e.currentTarget.select()}
-        className="min-w-0 flex-1 border border-ink/40 bg-white/60 px-3 py-2.5 text-sm"
+        className="min-h-11 min-w-0 flex-1 border border-paper/40 bg-paper px-3 text-sm text-ink"
       />
       <button
         type="button"
@@ -21,10 +22,10 @@ export function CopyLink({ link }: { link: string }) {
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
           } catch {
-            // 剪贴板不可用时，用户仍可以手动复制输入框里的链接
+            // If the clipboard is unavailable, the user can still copy the link from the input by hand
           }
         }}
-        className="shrink-0 bg-accent px-4 py-2.5 text-sm font-semibold text-paper hover:bg-ink"
+        className="min-h-11 shrink-0 bg-paper px-4 text-sm font-semibold text-accent transition-colors hover:bg-white"
       >
         <span aria-live="polite">{copied ? "Copied" : "Copy"}</span>
       </button>

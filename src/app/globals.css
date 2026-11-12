@@ -1,7 +1,7 @@
 @import "tailwindcss";
 @config "../../tailwind.config.ts";
 
-/* Tailwind v4 不会把 JS 配置里的颜色生成 CSS 变量，body 用到的变量在这里声明（值与 tailwind.config.ts 保持一致） */
+/* Tailwind v4 does not turn colours from the JS config into CSS variables, so the ones used by body are declared here (keep the values in sync with tailwind.config.ts) */
 @theme {
   --color-paper: #f7f3ec;
   --color-ink: #1a1a1a;
@@ -29,7 +29,7 @@ body {
   color: var(--color-paper);
 }
 
-/* 键盘操作时统一的焦点框 */
+/* One consistent focus ring for keyboard navigation */
 :where(a, button, input, select, summary):focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 3px;
@@ -38,7 +38,7 @@ body {
   outline-color: var(--color-paper);
 }
 
-/* 标题不留孤字 */
+/* No orphaned words in headings */
 h1,
 h2,
 h3 {
@@ -48,20 +48,20 @@ p {
   text-wrap: pretty;
 }
 
-/* Playfair 默认是旧式数字（高低不齐），标题里的数字统一用等高数字 */
+/* Serif display fonts may default to old-style figures (uneven heights); use lining figures for numbers in headings */
 .font-serif {
   font-feature-settings: "lnum" 1;
 }
 
-/* 价格数字等宽对齐 */
+/* Tabular figures so prices line up */
 .price {
   font-variant-numeric: tabular-nums;
 }
 
-/* 计算器滑块：已选部分深绿，未选部分浅灰，圆形滑块 */
+/* Simulator slider: dark green for the selected part, light grey for the rest, round thumb */
 .range {
   appearance: none;
-  /* 整条可点区域 44px 高，手指好拖 */
+  /* The whole hit area is 44px tall so it is easy to drag with a finger */
   height: 44px;
   background: transparent;
   cursor: pointer;
@@ -102,7 +102,7 @@ p {
   background: var(--color-paper);
 }
 
-/* 去掉 Safari 的 details 默认三角 */
+/* Remove Safari's default details triangle */
 .faq summary::-webkit-details-marker {
   display: none;
 }

@@ -13,7 +13,7 @@ export function PeopleIcon({ className = "h-4 w-4" }: { className?: string }) {
   );
 }
 
-// 已报名人数。接口失败或还没人报名时不显示。
+// Number of people signed up. Hidden when the request fails or nobody has joined yet.
 export function WaitlistCount() {
   const [total, setTotal] = useState<number | null>(null);
 

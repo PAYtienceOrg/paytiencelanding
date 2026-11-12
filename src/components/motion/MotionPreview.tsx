@@ -11,7 +11,7 @@ const steps = [
 
 const filler = "Choose your crypto, set a lower price and a deadline. If the market reaches your target, we buy for you. If it doesn't, you get a full refund.";
 
-// 预览页：四个动画组件的演示，页面够长可以滚动。
+// Preview page: a demo of the four motion components, long enough to scroll.
 export function MotionPreview() {
   return (
     <main className="mx-auto max-w-4xl bg-paper px-6 py-16 text-ink">

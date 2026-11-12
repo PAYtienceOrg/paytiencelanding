@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 type Link = { href: string; label: string };
 
-// 手机上的菜单：点按钮展开，点链接或按 Esc 收起。
+// Mobile menu: the button opens it; picking a link or pressing Esc closes it.
 export function MobileNav({ links }: { links: Link[] }) {
   const [open, setOpen] = useState(false);
 

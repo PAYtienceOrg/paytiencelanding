@@ -19,15 +19,15 @@ const faqs = [
   },
   {
     q: "How does the waitlist work?",
-    a: "Create an account and confirm your email to get a place in line. We let people in gradually, in waitlist order. Log in any time to see your position — every friend who signs up with your invite link moves you up five places.",
+    a: "Enter your email to get a place in line — no account or password. We let people in gradually, in waitlist order. Enter the same email again any time to see your position. Every friend who joins with your invite link moves you up five places.",
   },
   {
     q: "When can I start using Paytience?",
-    a: "We're opening in waves. When your place in line comes up, we switch on your account and email you — then you can place your first order.",
+    a: "We're opening in waves. When your place in line comes up, we email you an invite — then you can place your first order.",
   },
 ];
 
-// 常见问题：原生 details 展开收起，第一条默认展开。
+// FAQ: native details elements; the first one is open by default.
 export function Faq() {
   return (
     <section id="faq" aria-labelledby="faq-title" className="scroll-mt-20 py-12">

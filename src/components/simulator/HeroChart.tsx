@@ -6,25 +6,26 @@ import { buildPath, coinById, formatAmount, formatMoney, POINTS, priceAt, target
 import { useNarrow, usePlayback } from "./hooks";
 import { SimulatorChart } from "./SimulatorChart";
 
-// 头图示例：5 ETH，目标 $2,400，等 3 天
+// Hero example: 5 ETH, $2,400 target, 3-day window
 const COIN = coinById("ETH");
 const AMOUNT = 5;
 const TARGET = targetFor(COIN.price, 4);
 const DAYS = 3;
 const TOTAL = AMOUNT * TARGET;
 const PAUSE_MS = 2500;
-const AUTO_SWITCHES = 3; // 自动切换几次后停下，不一直闪
+const AUTO_SWITCHES = 3; // stop after this many automatic switches instead of flipping forever
 
 const scenarios: { id: Scenario; label: string; arrow: string }[] = [
   { id: "drop", label: "If it drops", arrow: "↘" },
   { id: "rise", label: "If it rises", arrow: "↗" },
 ];
 
-// 头图右侧：自动演示“跌了就成交 / 涨了就退款”，也可以点击切换。
+// Right side of the hero: auto-plays "drops and fills / rises and refunds"; can also be switched by clicking.
 export function HeroChart() {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, amount: 0.3 });
-  const narrow = useNarrow();
+  const chartRef = useRef<HTMLDivElement>(null);
+  const narrow = useNarrow(chartRef);
 
   const [scenario, setScenario] = useState<Scenario>("drop");
   const [switches, setSwitches] = useState(0);
@@ -36,7 +37,7 @@ export function HeroChart() {
   const done = progress >= 1;
   const filled = scenario === "drop" && path.hitIndex !== null && progress * (POINTS - 1) >= path.hitIndex;
 
-  // 播完停一会儿，自动换到另一种情况；用户点过就不再自动切换
+  // Pause after playback, then switch to the other outcome; once the user has clicked, stop switching automatically
   useEffect(() => {
     if (!done || touched || switches >= AUTO_SWITCHES) return;
     const t = window.setTimeout(() => {
@@ -88,7 +89,7 @@ export function HeroChart() {
         ))}
       </div>
 
-      <div className="mt-3">
+      <div ref={chartRef} className="mt-3">
         <SimulatorChart coin={COIN.id} path={path} target={TARGET} scenario={scenario} days={DAYS} progress={progress} narrow={narrow} />
       </div>
 

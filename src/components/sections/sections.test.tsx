@@ -6,7 +6,7 @@ vi.mock("framer-motion", async (importOriginal) => ({
   useReducedMotion: () => true,
 }));
 
-// jsdom 没有 IntersectionObserver；桩永远不触发，组件停在初始状态。
+// jsdom has no IntersectionObserver; the stub never fires, so components stay in their initial state.
 vi.stubGlobal(
   "IntersectionObserver",
   class {
@@ -27,7 +27,7 @@ afterEach(cleanup);
 const banned = /risk-free|guaranteed|zero risk/i;
 
 describe("HowItWorks", () => {
-  it("显示标题和三个步骤", () => {
+  it("shows the title and three steps", () => {
     render(<HowItWorks />);
     expect(screen.getByRole("heading", { name: "How it works" })).toBeTruthy();
     expect(screen.getAllByRole("listitem")).toHaveLength(3);
@@ -36,43 +36,43 @@ describe("HowItWorks", () => {
     expect(screen.getByText("Get crypto or a refund")).toBeTruthy();
   });
 
-  it("文案不含禁用词", () => {
+  it("copy contains no banned words", () => {
     const { container } = render(<HowItWorks />);
     expect(container.textContent).not.toMatch(banned);
   });
 });
 
-// 这个文件里动画是关闭的（减少动画），模拟器直接显示最终结果。
+// Motion is off in this file (reduced motion), so the simulator shows the final result right away.
 describe("Simulator", () => {
   const commit = () => screen.getByText("You commit").nextElementSibling?.textContent;
 
-  it("默认：5 ETH，目标 $2,400，下跌情景直接成交", () => {
+  it("default: 5 ETH, $2,400 target, the drop scenario fills", () => {
     render(<Simulator />);
     expect(commit()).toBe("$12,000");
     expect(screen.getByText("You get 5 ETH at $2,400")).toBeTruthy();
     expect(screen.getByText("Target reached on day 2")).toBeTruthy();
   });
 
-  it("切到上涨情景：全额退款", async () => {
+  it("switching to the rise scenario: full refund", async () => {
     render(<Simulator />);
     fireEvent.click(screen.getByRole("button", { name: /Price rises/ }));
-    // 旧结果卡片先淡出，新的才出现
+    // The old result card fades out before the new one appears
     expect(await screen.findByText("$12,000 refunded in full")).toBeTruthy();
     expect(screen.getByText(/above your \$2,400 target/)).toBeTruthy();
   });
 
-  it("换币种时数量重置为该币的默认值", () => {
+  it("changing the coin resets the amount to that coin's default", () => {
     render(<Simulator />);
     fireEvent.click(screen.getByRole("button", { name: /BTC/ }));
     expect((screen.getByLabelText("How much") as HTMLSelectElement).value).toBe("0.1");
-    // 65,000 × 96% = 62,400；× 0.1 = 6,240
+    // 65,000 × 96% = 62,400; × 0.1 = 6,240
     expect(commit()).toBe("$6,240");
     expect(screen.getByText("You get 0.1 BTC at $62,400")).toBeTruthy();
   });
 
-  it("拖价格、改数量和天数后结果跟着变", () => {
+  it("the result follows changes to price, amount and days", () => {
     render(<Simulator />);
-    // 滑块值是负的折扣：-10 = 比现价低 10%
+    // The slider value is the negative discount: -10 = 10% below the current price
     fireEvent.change(screen.getByLabelText("Your price"), { target: { value: "-10" } });
     fireEvent.change(screen.getByLabelText("How much"), { target: { value: "2" } });
     fireEvent.click(screen.getByRole("button", { name: "7 days" }));
@@ -81,28 +81,28 @@ describe("Simulator", () => {
     expect(screen.getByText("Target reached on day 5")).toBeTruthy();
   });
 
-  it("价格滑块往右是更高的价格，两端显示价格", () => {
+  it("the price slider goes up to the right, with prices shown at both ends", () => {
     render(<Simulator />);
     const slider = screen.getByLabelText("Your price") as HTMLInputElement;
-    expect(screen.getByText("$2,000")).toBeTruthy(); // 左端：低 20%
-    expect(screen.getByText("$2,475")).toBeTruthy(); // 右端：低 1%
+    expect(screen.getByText("$2,000")).toBeTruthy(); // left end: 20% lower
+    expect(screen.getByText("$2,475")).toBeTruthy(); // right end: 1% lower
     fireEvent.change(slider, { target: { value: slider.max } });
     expect(commit()).toBe("$12,375"); // 5 × $2,475
   });
 
-  it("同时列出两种结果", () => {
+  it("lists both outcomes together", () => {
     render(<Simulator />);
     expect(screen.getByText("If ETH hits $2,400 within 3 days")).toBeTruthy();
     expect(screen.getByText("You get 5 ETH")).toBeTruthy();
     expect(screen.getByText("$12,000 back")).toBeTruthy();
   });
 
-  it("按钮都够大，手机上好点", () => {
+  it("buttons are large enough to tap on a phone", () => {
     render(<Simulator />);
     for (const b of screen.getAllByRole("button")) expect(b.className).toMatch(/min-h-11/);
   });
 
-  it("文案不含禁用词", () => {
+  it("copy contains no banned words", () => {
     const { container } = render(<Simulator />);
     fireEvent.click(screen.getByRole("button", { name: /Price rises/ }));
     expect(container.textContent).not.toMatch(banned);
@@ -110,7 +110,7 @@ describe("Simulator", () => {
 });
 
 describe("GoodToKnow", () => {
-  it("四条规则，带锚点", () => {
+  it("four rules, with an anchor", () => {
     const { container } = render(<GoodToKnow />);
     expect(container.querySelector("#good-to-know")).toBeTruthy();
     expect(container.querySelectorAll("dt")).toHaveLength(4);
@@ -125,7 +125,7 @@ describe("MobileNav", () => {
     { href: "#b", label: "B" },
   ];
 
-  it("点按钮展开，点链接后收起", () => {
+  it("opens on button click, closes after picking a link", () => {
     render(<MobileNav links={links} />);
     const button = screen.getByRole("button", { name: "Open menu" });
     expect(button.getAttribute("aria-expanded")).toBe("false");
@@ -135,7 +135,7 @@ describe("MobileNav", () => {
     expect(screen.queryByRole("link", { name: "A" })).toBeNull();
   });
 
-  it("按 Esc 收起", () => {
+  it("closes on Esc", () => {
     render(<MobileNav links={links} />);
     fireEvent.click(screen.getByRole("button", { name: "Open menu" }));
     fireEvent.keyDown(window, { key: "Escape" });
@@ -144,7 +144,7 @@ describe("MobileNav", () => {
 });
 
 describe("Faq", () => {
-  it("六个问题，第一个默认展开", () => {
+  it("six questions, the first open by default", () => {
     const { container } = render(<Faq />);
     const items = container.querySelectorAll("details");
     expect(items).toHaveLength(6);

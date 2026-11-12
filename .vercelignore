@@ -1,4 +1,4 @@
-# 用 CLI 部署时不上传这些本地文件
+# Local files that are not uploaded when deploying with the CLI
 .env*
 !.env.example
 .claude/

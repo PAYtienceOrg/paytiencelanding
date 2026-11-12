@@ -7,7 +7,7 @@ import { Simulator } from "@/components/simulator/Simulator";
 import { JoinLink } from "@/components/waitlist/JoinLink";
 import { WaitlistCount } from "@/components/waitlist/WaitlistCount";
 
-// 原来 “Why wait” 区块的三点，压缩成头图下面的要点
+// The three points from the old "Why wait" section, condensed into bullets under the hero
 const facts = ["No chart-watching", "You pick the price & deadline", "Full refund if it doesn't fill"];
 
 function Check() {
@@ -18,7 +18,7 @@ function Check() {
   );
 }
 
-// 页面顺序：头图 → 三步说明 → 模拟器（重点，浅绿全宽）→ 规则 → 常见问题 → 分批开放
+// Page order: hero → three steps → simulator (the focus, full-width light green) → rules → FAQ → early access
 export default function Home() {
   return (
     <>

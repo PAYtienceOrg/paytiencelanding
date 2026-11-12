@@ -19,7 +19,7 @@ const notes = [
   },
 ];
 
-// 下单前需要知道的几件事，写清楚规则和风险。
+// What to know before placing an order: the rules and the risks, stated plainly.
 export function GoodToKnow() {
   return (
     <section id="good-to-know" aria-labelledby="good-to-know-title" className="scroll-mt-20 py-12">
@@ -29,7 +29,7 @@ export function GoodToKnow() {
           title="The rules, in plain words."
           intro="Four things to understand before you set a price."
         />
-        {/* 紧凑列表：左边规则名，右边一句解释 */}
+        {/* Compact list: rule name on the left, a one-sentence explanation on the right */}
         <dl className="border-b border-rule">
           {notes.map((n) => (
             <div key={n.title} className="grid gap-1 border-t border-rule py-4 sm:grid-cols-[15rem_1fr] sm:gap-6">
