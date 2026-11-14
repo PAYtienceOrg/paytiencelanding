@@ -31,14 +31,15 @@ describe("JoinLink", () => {
 });
 
 describe("WaitlistForm", () => {
-  it("joins with just an email and shows the place and invite link", async () => {
+  it("joins with just an email and shows the place, with no invite link", async () => {
     const fetchMock = mockFetch(201, { position: 1284, referralCode: "abcd1234", total: 1284 });
     vi.stubGlobal("fetch", fetchMock);
     render(<WaitlistForm />);
     submit(" you@example.com ");
     expect(await screen.findByText("#1,284")).toBeTruthy();
     expect(screen.getByText("You're on the waitlist.")).toBeTruthy();
-    expect((screen.getByLabelText("Your invite link") as HTMLInputElement).value).toBe(`${window.location.origin}/?ref=abcd1234`);
+    expect(screen.queryByLabelText("Your invite link")).toBeNull();
+    expect(screen.queryByText(/Move up the line/)).toBeNull();
     expect(fetchMock.mock.calls[0][0]).toBe("/api/waitlist");
     expect(sentBody(fetchMock)).toEqual({ email: "you@example.com" });
     expect(screen.queryByLabelText(/password/i)).toBeNull();
@@ -52,18 +53,10 @@ describe("WaitlistForm", () => {
     expect(screen.getByText("#3")).toBeTruthy();
   });
 
-  it("sends a well-formed invite code from the address and drops a malformed one", async () => {
+  it("ignores an invite code in the address", async () => {
     const fetchMock = mockFetch(201, { position: 2, referralCode: "abcd1234", total: 2 });
     vi.stubGlobal("fetch", fetchMock);
     window.history.replaceState(null, "", "/?ref=code0001");
-    render(<WaitlistForm />);
-    submit("you@example.com");
-    await screen.findByText("#2");
-    expect(sentBody(fetchMock)).toEqual({ email: "you@example.com", ref: "code0001" });
-
-    cleanup();
-    fetchMock.mockClear();
-    window.history.replaceState(null, "", "/?ref=bad");
     render(<WaitlistForm />);
     submit("you@example.com");
     await screen.findByText("#2");
@@ -81,6 +74,14 @@ describe("WaitlistForm", () => {
     expect((await screen.findByRole("alert")).textContent).toMatch(message);
     expect(screen.queryByText(/internal detail/)).toBeNull();
     expect(screen.getByRole("button", { name: "Join the waitlist" })).toBeTruthy();
+  });
+
+  it("can appear twice on a page: unique field ids, and only the main form is the Join target", () => {
+    const { container } = render(<><WaitlistForm variant="hero" /><WaitlistForm /></>);
+    const [heroInput, mainInput] = screen.getAllByLabelText("Email address");
+    expect(heroInput.id).not.toBe(mainInput.id);
+    expect(container.querySelectorAll("#join")).toHaveLength(1);
+    expect(container.querySelector("#join")?.contains(mainInput)).toBe(true);
   });
 
   it("does not call the server for an empty email", () => {

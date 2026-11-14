@@ -8,15 +8,18 @@ import {
   COINS,
   DISCOUNT_MAX,
   DISCOUNT_MIN,
-  fillDay,
+  dayOf,
   formatAmount,
   formatMoney,
-  POINTS,
+  formatUsdc,
+  outcomeOf,
   priceAt,
+  reached,
   targetFor,
   WINDOWS,
   type CoinId,
   type Scenario,
+  type Strategy,
 } from "../../lib/simulator";
 import { eyebrow, SectionHeading } from "../sections/SectionHeading";
 import { useNarrow, usePlayback } from "./hooks";
@@ -40,7 +43,19 @@ function Field({ label, htmlFor, aside, children }: { label: string; htmlFor?: s
 const choice = (on: boolean) =>
   `min-h-11 border px-3 py-2 text-left transition-colors ${on ? "border-accent bg-accent text-paper" : "border-ink/30 bg-paper hover:border-ink"}`;
 
-// Try it yourself: pick a coin, amount, target price and waiting period, then watch the animation and result for both the drop and the rise.
+const strategies: { id: Strategy; name: string; hint: string }[] = [
+  { id: "buy", name: "Buy low", hint: "Set a price below today's" },
+  { id: "sell", name: "Sell high", hint: "Set a price above today's" },
+];
+
+// Example markets, named relative to the target so they read the same for both strategies
+const scenarios: { id: Scenario; text: string }[] = [
+  { id: "hit", text: "Ends past target" },
+  { id: "turn", text: "Touches, turns back" },
+  { id: "away", text: "Never reaches it" },
+];
+
+// Try it yourself: pick a strategy, asset, amount, target price and deadline, then replay how the order settles at the deadline in different markets.
 // The page's focal section: a full light-green background sets it apart from the paper-coloured sections around it.
 export function Simulator() {
   const id = useId();
@@ -50,38 +65,58 @@ export function Simulator() {
   const inView = useInView(chartRef, { once: true, amount: 0.5 });
   const narrow = useNarrow(chartRef);
 
+  const [strategy, setStrategy] = useState<Strategy>("buy");
   const [coinId, setCoinId] = useState<CoinId>("ETH");
   const [amount, setAmount] = useState(5);
-  const [discount, setDiscount] = useState(4);
+  const [pct, setPct] = useState(4); // distance of the target from today's price, in percent
   const [days, setDays] = useState(3);
-  const [scenario, setScenario] = useState<Scenario>("drop");
+  const [scenario, setScenario] = useState<Scenario>("hit");
   const [replay, setReplay] = useState(0);
 
+  const buy = strategy === "buy";
   const coin = coinById(coinId);
-  const target = targetFor(coin.price, discount);
+  const target = targetFor(coin.price, pct, strategy);
   const total = Math.round(amount * target * 100) / 100;
-  const path = useMemo(() => buildPath(coin.price, target, scenario), [coin.price, target, scenario]);
+  const path = useMemo(() => buildPath(coin.price, target, strategy, scenario), [coin.price, target, strategy, scenario]);
 
   // Replay whenever any input changes
-  const progress = usePlayback(`${coinId}|${amount}|${discount}|${days}|${scenario}|${replay}`, inView);
+  const progress = usePlayback(`${strategy}|${coinId}|${amount}|${pct}|${days}|${scenario}|${replay}`, inView);
   const done = progress >= 1;
-  const filled = scenario === "drop" && path.hitIndex !== null && progress * (POINTS - 1) >= path.hitIndex;
+  // Settled once, at the deadline, by the price at that moment
+  const outcome = outcomeOf(path.prices, target, strategy);
+  const filled = done && outcome === "fill";
+  const refunded = done && outcome === "refund";
   const live = priceAt(path.prices, progress);
   const endPrice = path.prices[path.prices.length - 1];
   const day = Math.min(days, Math.floor(progress * days) + 1);
+  const touchDay = path.touchIndex === null ? null : dayOf(path.touchIndex, days);
 
   const pickCoin = (next: CoinId) => {
     setCoinId(next);
     setAmount(coinById(next).defaultAmount);
   };
 
-  const final =
-    scenario === "drop"
-      ? `Filled: you get ${formatAmount(amount, coinId)} at ${formatMoney(target)}.`
-      : `Not filled: ${formatMoney(total)} refunded in full.`;
+  // Wording that differs between the two strategies
+  const money = formatUsdc(total);
+  const windowEnd = days === 1 ? "day ends" : `${days} days end`; // e.g. "ETH price when the 3 days end"
+  const assets = formatAmount(amount, coinId);
+  const goal = formatMoney(target);
+  const side = buy ? "below" : "above"; // where the price has to be for the order to fill
+  const otherSide = buy ? "above" : "below";
+  const committed = buy ? money : assets;
+  const fillTitle = buy ? `You get ${assets} at ${goal}` : `You sell ${assets} at ${goal}`;
+  const refundTitle = `You get your ${committed} back`;
 
-  // Slider to the right = higher target price (closer to the current price)
-  const sliderFill = ((DISCOUNT_MAX - discount) / (DISCOUNT_MAX - DISCOUNT_MIN)) * 100;
+  const final =
+    outcome === "fill"
+      ? `At the deadline ${coinId} is at or ${side} your target. Filled: ${fillTitle}.`
+      : `At the deadline ${coinId} is ${otherSide} your target. Not filled: ${refundTitle}.`;
+
+  // The slider always runs from the lower price on the left to the higher price on the right
+  const sliderMin = buy ? -DISCOUNT_MAX : DISCOUNT_MIN;
+  const sliderMax = buy ? -DISCOUNT_MIN : DISCOUNT_MAX;
+  const sliderValue = buy ? -pct : pct;
+  const sliderFill = ((sliderValue - sliderMin) / (sliderMax - sliderMin)) * 100;
 
   return (
     <section id="simulator" aria-labelledby="simulator-title" className="scroll-mt-16 bg-mint py-14">
@@ -89,14 +124,25 @@ export function Simulator() {
         <SectionHeading
           id="simulator-title"
           title="See how your order plays out."
-          intro="Pick a coin, an amount and your price. Then watch what happens if the market drops — or rises."
+          intro="Pick a strategy, an asset and your price. Your order is settled once, at your deadline — replay how different markets end."
         />
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.55fr)] lg:gap-10">
-          {/* Left: options + both outcomes */}
+          {/* Left: options */}
           <div className="space-y-6">
-            <Field label="Coin">
-              <div className="grid grid-cols-3 gap-2" role="group" aria-label="Coin">
+            <Field label="Strategy">
+              <div className="grid grid-cols-2 gap-2" role="group" aria-label="Strategy">
+                {strategies.map((s) => (
+                  <button key={s.id} type="button" aria-pressed={s.id === strategy} onClick={() => setStrategy(s.id)} className={choice(s.id === strategy)}>
+                    <span className="block font-serif text-lg font-bold leading-tight">{s.name}</span>
+                    <span className="block text-xs opacity-80">{s.hint}</span>
+                  </button>
+                ))}
+              </div>
+            </Field>
+
+            <Field label="Asset">
+              <div className="grid grid-cols-3 gap-2" role="group" aria-label="Asset">
                 {COINS.map((c) => (
                   <button key={c.id} type="button" aria-pressed={c.id === coinId} onClick={() => pickCoin(c.id)} className={choice(c.id === coinId)}>
                     <span className="block font-serif text-lg font-bold leading-tight">{c.id}</span>
@@ -122,32 +168,8 @@ export function Simulator() {
               </select>
             </Field>
 
-            <Field
-              label="Your price"
-              htmlFor={`${id}-price`}
-              aside={<span className="font-serif text-2xl font-bold tabular-nums">{formatMoney(target)}</span>}
-            >
-              <input
-                id={`${id}-price`}
-                type="range"
-                min={-DISCOUNT_MAX}
-                max={-DISCOUNT_MIN}
-                step={1}
-                value={-discount}
-                aria-valuetext={`${formatMoney(target)}, ${discount}% below today's example price`}
-                onChange={(e) => setDiscount(-Number(e.target.value))}
-                className="range h-11 w-full"
-                style={{ "--fill": `${sliderFill}%` } as CSSProperties}
-              />
-              <div className="flex justify-between text-xs tabular-nums text-ink/70">
-                <span>{formatMoney(targetFor(coin.price, DISCOUNT_MAX))}</span>
-                <span>{formatMoney(targetFor(coin.price, DISCOUNT_MIN))}</span>
-              </div>
-              <p className="mt-1 text-xs font-medium text-accent">{discount}% below today&apos;s example price</p>
-            </Field>
-
-            <Field label="Wait up to">
-              <div className="grid grid-cols-3 gap-2" role="group" aria-label="Wait up to">
+            <Field label="Deadline: check the price after">
+              <div className="grid grid-cols-3 gap-2" role="group" aria-label="Deadline">
                 {WINDOWS.map((w) => (
                   <button key={w} type="button" aria-pressed={w === days} onClick={() => setDays(w)} className={`${choice(w === days)} text-center text-sm font-semibold`}>
                     {w} day{w === 1 ? "" : "s"}
@@ -156,48 +178,42 @@ export function Simulator() {
               </div>
             </Field>
 
-            {/* Committed amount and both outcomes (replaces the old standalone Two outcomes section) */}
-            <div className="border border-accent bg-paper">
-              <div className="flex items-baseline justify-between gap-4 bg-accent px-4 py-3 text-paper">
-                <span className={eyebrow}>You commit</span>
-                <span className="font-serif text-2xl font-bold tabular-nums">{formatMoney(total)}</span>
+            <Field label="Your target price" htmlFor={`${id}-price`} aside={<span className="font-serif text-2xl font-bold tabular-nums">{goal}</span>}>
+              <input
+                id={`${id}-price`}
+                type="range"
+                min={sliderMin}
+                max={sliderMax}
+                step={1}
+                value={sliderValue}
+                aria-valuetext={`${goal}, ${pct}% ${side} today's example price`}
+                onChange={(e) => setPct(Math.abs(Number(e.target.value)))}
+                className="range h-11 w-full"
+                style={{ "--fill": `${sliderFill}%` } as CSSProperties}
+              />
+              <div className="flex justify-between text-xs tabular-nums text-ink/70">
+                <span>{formatMoney(targetFor(coin.price, buy ? DISCOUNT_MAX : DISCOUNT_MIN, strategy))}</span>
+                <span>{formatMoney(targetFor(coin.price, buy ? DISCOUNT_MIN : DISCOUNT_MAX, strategy))}</span>
               </div>
-              <dl className="divide-y divide-rule px-4 text-sm">
-                <div className="flex items-baseline justify-between gap-4 py-3">
-                  <dt>
-                    If {coinId} hits {formatMoney(target)} within {days} day{days === 1 ? "" : "s"}
-                  </dt>
-                  <dd className="shrink-0 font-serif text-lg font-bold text-accent">You get {formatAmount(amount, coinId)}</dd>
-                </div>
-                <div className="flex items-baseline justify-between gap-4 py-3">
-                  <dt>If it doesn&apos;t</dt>
-                  <dd className="shrink-0 font-serif text-lg font-bold tabular-nums text-refund">{formatMoney(total)} back</dd>
-                </div>
-              </dl>
-            </div>
+              <p className="mt-1 text-xs font-medium text-accent">
+                {pct}% {side} today&apos;s example price
+              </p>
+            </Field>
           </div>
 
-          {/* Right: scenario switch + chart + result */}
+          {/* Right: market switch + chart + result */}
           <div className="border border-ink/40 bg-paper">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/30 px-4 py-3">
-              <div className="flex border border-ink/40" role="group" aria-label="Market scenario">
-                {(
-                  [
-                    ["drop", "Price drops", "↘"],
-                    ["rise", "Price rises", "↗"],
-                  ] as const
-                ).map(([s, text, arrow]) => (
+              <div className="flex flex-wrap border border-ink/40" role="group" aria-label="Market scenario">
+                {scenarios.map((s) => (
                   <button
-                    key={s}
+                    key={s.id}
                     type="button"
-                    aria-pressed={scenario === s}
-                    onClick={() => (scenario === s ? setReplay((n) => n + 1) : setScenario(s))}
-                    className={`min-h-11 px-3 text-sm font-semibold transition-colors ${scenario === s ? "bg-ink text-paper" : "hover:bg-mint"}`}
+                    aria-pressed={scenario === s.id}
+                    onClick={() => (scenario === s.id ? setReplay((n) => n + 1) : setScenario(s.id))}
+                    className={`min-h-11 px-3 text-sm font-semibold transition-colors ${scenario === s.id ? "bg-ink text-paper" : "hover:bg-mint"}`}
                   >
-                    <span aria-hidden className="mr-1">
-                      {arrow}
-                    </span>
-                    {text}
+                    {s.text}
                   </button>
                 ))}
               </div>
@@ -215,25 +231,34 @@ export function Simulator() {
             </div>
 
             <div ref={chartRef} className="px-2 pt-3 sm:px-4">
-              <SimulatorChart coin={coinId} path={path} target={target} scenario={scenario} days={days} progress={progress} narrow={narrow} />
+              <SimulatorChart coin={coinId} strategy={strategy} path={path} target={target} days={days} progress={progress} narrow={narrow} />
             </div>
 
             <div className="min-h-[7.5rem] border-t border-ink/30 p-4">
               <AnimatePresence mode="wait" initial={false}>
                 {filled ? (
                   <motion.div key="filled" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="border-l-4 border-accent bg-mint px-4 py-3">
-                    <p className={`${eyebrow} text-accent`}>Target reached on day {fillDay(path.hitIndex ?? 0, days)}</p>
-                    <p className="mt-1 font-serif text-2xl font-bold">
-                      You get {formatAmount(amount, coinId)} at {formatMoney(target)}
+                    <p className={`${eyebrow} text-accent`}>
+                      Deadline reached: {coinId} is at or {side} your target
                     </p>
-                    <p className="mt-1 text-sm text-ink/80">You pay {formatMoney(total)} — exactly the price you set.</p>
-                  </motion.div>
-                ) : scenario === "rise" && done ? (
-                  <motion.div key="refund" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="border-l-4 border-refund bg-refund-tint px-4 py-3">
-                    <p className={`${eyebrow} text-refund`}>Deadline reached, target not hit</p>
-                    <p className="mt-1 font-serif text-2xl font-bold">{formatMoney(total)} refunded in full</p>
+                    <p className="mt-1 font-serif text-2xl font-bold">{fillTitle}</p>
                     <p className="mt-1 text-sm text-ink/80">
-                      {coinId} ended the window at {formatMoney(endPrice)}, above your {formatMoney(target)} target.
+                      {touchDay !== null && touchDay < days ? `${coinId} first touched ${goal} on day ${touchDay}, but nothing happened until the deadline. ` : ""}
+                      {coinId} ended the window at {formatMoney(endPrice)}. You {buy ? "pay" : "receive"} {money} — the price you set, not the market price at the
+                      deadline. You keep your upfront yield.
+                    </p>
+                  </motion.div>
+                ) : refunded ? (
+                  <motion.div key="refund" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="border-l-4 border-ink bg-rule/40 px-4 py-3">
+                    <p className={eyebrow}>
+                      Deadline reached: {coinId} is {otherSide} your target
+                    </p>
+                    <p className="mt-1 font-serif text-2xl font-bold">{refundTitle}</p>
+                    <p className="mt-1 text-sm text-ink/80">
+                      {touchDay === null
+                        ? `${coinId} ended the window at ${formatMoney(endPrice)}, ${otherSide} your ${goal} target.`
+                        : `${coinId} went ${side} ${goal} on day ${touchDay}, but ended the window at ${formatMoney(endPrice)}. Only the price at the deadline counts.`}{" "}
+                      You keep your upfront yield.
                     </p>
                   </motion.div>
                 ) : (
@@ -244,7 +269,9 @@ export function Simulator() {
                     <p className="mt-1 font-serif text-2xl font-bold tabular-nums">
                       {coinId} at {formatMoney(live)}
                     </p>
-                    <p className="mt-1 text-sm text-ink/80">Waiting for your {formatMoney(target)} target…</p>
+                    <p className="mt-1 text-sm text-ink/80">
+                      {reached(live, target, strategy) ? `Past your ${goal} target, but nothing happens yet. ` : ""}Only the price at the deadline counts.
+                    </p>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -255,6 +282,56 @@ export function Simulator() {
             <p className="border-t border-ink/30 px-4 py-2 text-xs text-ink/60">
               Simulated example with illustrative prices — not live market data or a prediction. Crypto prices can move in either direction.
             </p>
+          </div>
+        </div>
+
+        {/* Full width under both columns: the order at a glance. Commit → yield now, then the deadline price picks one of two outcomes. */}
+        <div className="mt-8 border border-accent bg-paper">
+          {/* Step 1: what goes in, what you get straight away */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 bg-accent px-4 py-3 text-paper sm:px-6">
+            <p className="flex items-baseline gap-2">
+              <span className={eyebrow}>You commit</span>
+              <span className="font-serif text-2xl font-bold tabular-nums">{committed}</span>
+            </p>
+            <span aria-hidden className="text-xl">
+              →
+            </span>
+            <p className="flex items-baseline gap-2">
+              <span className="font-serif text-2xl font-bold">+ Upfront yield</span>
+              <span className="text-xs opacity-80">paid now, yours to keep</span>
+            </p>
+          </div>
+
+          {/* Step 2: a price scale split at the target. The deadline price lands on one side. */}
+          <div className="px-4 pb-4 pt-5 sm:px-6">
+            <p className={eyebrow}>{coinId} price when the {windowEnd}</p>
+            <div className="relative mt-8">
+              <p className="absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap bg-accent px-2 py-0.5 text-xs font-semibold tabular-nums text-paper">
+                Target {goal}
+              </p>
+              <div aria-hidden className="absolute -top-1 bottom-0 left-1/2 border-l-2 border-dashed border-accent" />
+              <ul className="grid grid-cols-2" aria-label={`Outcomes at the deadline, split at ${goal}`}>
+                {[buy ? "fill" : "refund", buy ? "refund" : "fill"].map((kind, i) => {
+                  const fill = kind === "fill";
+                  const range = i === 0 ? (buy ? `At or below ${goal}` : `Below ${goal}`) : buy ? `Above ${goal}` : `At or above ${goal}`;
+                  return (
+                    <li key={kind} className={`${fill ? "bg-mint" : "bg-rule/40"} ${i === 0 ? "pr-4 sm:pr-6" : "pl-4 text-right sm:pl-6"} py-4 ${i === 0 ? "pl-3" : "pr-3"}`}>
+                      <p className="text-xs tabular-nums text-ink/70">
+                        {i === 0 ? "← " : ""}
+                        {range}
+                        {i === 1 ? " →" : ""}
+                      </p>
+                      <p className={`mt-1 font-serif text-lg font-bold leading-snug sm:text-xl ${fill ? "text-accent" : ""}`}>
+                        <span aria-hidden>{fill ? "✓ " : "↺ "}</span>
+                        {fill ? (buy ? `You get ${assets}` : `You get ${money}`) : refundTitle}
+                      </p>
+                      <p className="mt-0.5 text-xs text-ink/70">{fill ? "Filled at your price" : "Not filled"}</p>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+            <p className="mt-3 text-xs text-ink/70">Only the deadline price counts — touching {goal} earlier doesn&apos;t fill.</p>
           </div>
         </div>
       </div>

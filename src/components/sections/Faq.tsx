@@ -2,28 +2,36 @@ import { SectionHeading } from "./SectionHeading";
 
 const faqs = [
   {
-    q: "What happens if my target price isn't reached?",
-    a: "You receive a full refund to your original payment method when your deadline ends.",
-  },
-  {
     q: "When does my order get filled?",
-    a: "As soon as the market reaches your target price before your deadline. Your order fills at the price you set.",
+    a: "Only at your deadline. We check the market price once, at that moment. A buy-low order fills if the price is at or below your target; a sell-high order fills if it is at or above. Either way it fills at the price you set, and never earlier.",
   },
   {
-    q: "What if the price drops below my target?",
-    a: "Your order still fills at the price you set. Paytience doesn't wait for a lower price than the one you chose.",
+    q: "What if the price touches my target before the deadline?",
+    a: "Nothing happens yet. Only the price at the deadline counts, so if the price touches your target and then turns back by the deadline, your order doesn't fill and you get your money back.",
   },
   {
-    q: "Which cryptocurrencies can I choose?",
-    a: "We're starting with ETH. People on the waitlist will hear first when more coins are added.",
+    q: "What happens if my order doesn't fill?",
+    a: "You get back what you committed in full: your USDC for a buy-low order, your asset for a sell-high order. You keep the upfront yield.",
+  },
+  {
+    q: "What is the upfront yield?",
+    a: "It's paid to you when you place your order, and it's yours to keep whether the order fills or you get your money back.",
+  },
+  {
+    q: "What if the price is far past my target at the deadline?",
+    a: "Your order still fills at the price you set. That means buying above the market price for a buy-low order, or selling below it for a sell-high order. Choose a target you'd be happy with.",
+  },
+  {
+    q: "Which assets can I choose?",
+    a: "We're starting with ETH. Stocks and ETFs are on the way, with pre-stocks coming soon. People on the waitlist will hear first when more assets are added.",
   },
   {
     q: "How does the waitlist work?",
-    a: "Enter your email to get a place in line — no account or password. We let people in gradually, in waitlist order. Enter the same email again any time to see your position. Every friend who joins with your invite link moves you up five places.",
+    a: "Enter your email to get a place in line — no account or password. We let people in gradually, in waitlist order. Enter the same email again any time to see your position.",
   },
   {
-    q: "When can I start using Paytience?",
-    a: "We're opening in waves. When your place in line comes up, we email you an invite — then you can place your first order.",
+    q: "When can I start using PAYtience?",
+    a: "We're opening in waves. When your place in line comes up, we email you — then you can place your first order.",
   },
 ];
 

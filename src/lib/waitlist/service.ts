@@ -1,9 +1,9 @@
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { MemoryWaitlistStore } from "./memoryStore";
+import { MongoWaitlistStore } from "./mongoStore";
 import { ReferralCodeConflictError } from "./store";
 import type { WaitlistData, WaitlistStore } from "./store";
-import { SupabaseWaitlistStore } from "./supabaseStore";
 
 const signupSchema = z.object({
   email: z.string().trim().toLowerCase().max(254).email(),
@@ -12,7 +12,7 @@ const signupSchema = z.object({
 
 type ErrorResult = { status: 400 | 429 | 503; body: { error: string } };
 type SignupResult = { status: 200 | 201; body: WaitlistData } | ErrorResult;
-// Logs only the reason (status code and error type) to the server log: no emails, keys or database responses
+// Logs only the reason (error type and code) to the server log: no emails, credentials or database responses
 function logStorageError(operation: string, error: unknown) {
   const reason = error instanceof Error ? `${error.name}: ${error.message}` : "unknown error";
   console.error(`[waitlist] ${operation} failed — ${reason}`);
@@ -87,7 +87,7 @@ export class WaitlistService {
   }
 }
 
-// Production without Supabase: refuse signups (503) instead of silently
+// Production without MongoDB: refuse signups (503) instead of silently
 // keeping them in memory, where they would be lost on restart.
 class UnconfiguredWaitlistStore implements WaitlistStore {
   async join(): Promise<never> {
@@ -102,12 +102,13 @@ class UnconfiguredWaitlistStore implements WaitlistStore {
 type Env = Record<string, string | undefined>;
 
 export function createWaitlistStore(env: Env = process.env): WaitlistStore {
-  const url = env.SUPABASE_URL?.trim();
-  const key = env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-  if (env.NODE_ENV !== "test" && url && key) return new SupabaseWaitlistStore(url, key);
+  const uri = env.MONGODB_URI?.trim();
+  if (env.NODE_ENV !== "test" && uri) {
+    return new MongoWaitlistStore(uri, env.MONGODB_DB?.trim() || undefined);
+  }
   if (env.NODE_ENV === "production") {
     console.error(
-      "[waitlist] SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are not set. Signups are disabled until they are configured.",
+      "[waitlist] MONGODB_URI is not set. Signups are disabled until it is configured.",
     );
     return new UnconfiguredWaitlistStore();
   }

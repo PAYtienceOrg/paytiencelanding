@@ -6,17 +6,18 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 type CountUpProps = {
   value: number;
   prefix?: string;
+  suffix?: string;
   duration?: number;
   className?: string;
 };
 
-const format = (n: number, prefix: string) => `${prefix}${Math.round(n).toLocaleString("en-US")}`;
+const format = (n: number, prefix: string, suffix: string) => `${prefix}${Math.round(n).toLocaleString("en-US")}${suffix}`;
 
 const noop = () => () => {};
 
 // Counts up from 0 to the target once in view; with reduced motion it shows the final value right away.
-// Server rendering outputs the final value, so without JS (crawlers, slow loads) it never shows $0.
-export function CountUp({ value, prefix = "", duration = 0.8, className }: CountUpProps) {
+// Server rendering outputs the final value, so without JS (crawlers, slow loads) it never shows 0.
+export function CountUp({ value, prefix = "", suffix = "", duration = 0.8, className }: CountUpProps) {
   const reduce = useReducedMotion();
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true });
@@ -33,7 +34,7 @@ export function CountUp({ value, prefix = "", duration = 0.8, className }: Count
 
   return (
     <span ref={ref} className={`tabular-nums ${className ?? ""}`.trim()}>
-      {format(shown, prefix)}
+      {format(shown, prefix, suffix)}
     </span>
   );
 }

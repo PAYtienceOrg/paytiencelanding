@@ -14,9 +14,6 @@ const config: Config = {
         // Filled: pine green
         accent: "#1F4D3A",
         mint: "#E4EBE1",
-        // Refund: blue (stays distinguishable from the green for colour-blind users)
-        refund: "#2D4E86",
-        "refund-tint": "#E6ECF5",
         rule: "#D9D3C7",
       },
       fontFamily: {

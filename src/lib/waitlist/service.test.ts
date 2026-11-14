@@ -1,30 +1,33 @@
 // @vitest-environment node
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { MongoMemoryReplSet } from "mongodb-memory-server";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryWaitlistStore } from "./memoryStore";
+import { MongoWaitlistStore } from "./mongoStore";
 import { createWaitlistStore, WaitlistService } from "./service";
 import { ReferralCodeConflictError } from "./store";
-import { SupabaseWaitlistStore } from "./supabaseStore";
+import type { WaitlistStore } from "./store";
 
 describe("storage selection from environment", () => {
   afterEach(() => vi.restoreAllMocks());
 
-  const supabase = { SUPABASE_URL: "https://x.supabase.co", SUPABASE_SERVICE_ROLE_KEY: "key" };
+  const mongo = { MONGODB_URI: "mongodb+srv://user:pass@cluster0.example.mongodb.net/" };
 
-  it("uses Supabase when both values are set outside tests", () => {
-    expect(createWaitlistStore({ NODE_ENV: "production", ...supabase })).toBeInstanceOf(SupabaseWaitlistStore);
-    expect(createWaitlistStore({ NODE_ENV: "development", ...supabase })).toBeInstanceOf(SupabaseWaitlistStore);
+  it("uses MongoDB when the connection string is set outside tests", () => {
+    expect(createWaitlistStore({ NODE_ENV: "production", ...mongo })).toBeInstanceOf(MongoWaitlistStore);
+    expect(createWaitlistStore({ NODE_ENV: "development", ...mongo })).toBeInstanceOf(MongoWaitlistStore);
   });
 
-  it("uses memory in development and tests when Supabase is not configured", () => {
+  it("uses memory in development and tests when MongoDB is not configured", () => {
     expect(createWaitlistStore({ NODE_ENV: "development" })).toBeInstanceOf(MemoryWaitlistStore);
-    expect(createWaitlistStore({ NODE_ENV: "test", ...supabase })).toBeInstanceOf(MemoryWaitlistStore);
+    expect(createWaitlistStore({ NODE_ENV: "development", MONGODB_URI: " " })).toBeInstanceOf(MemoryWaitlistStore);
+    expect(createWaitlistStore({ NODE_ENV: "test", ...mongo })).toBeInstanceOf(MemoryWaitlistStore);
   });
 
-  it("refuses signups in production without Supabase instead of losing them in memory", async () => {
+  it("refuses signups in production without MongoDB instead of losing them in memory", async () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
-    const store = createWaitlistStore({ NODE_ENV: "production", SUPABASE_URL: "https://x.supabase.co" });
+    const store = createWaitlistStore({ NODE_ENV: "production" });
     expect(store).not.toBeInstanceOf(MemoryWaitlistStore);
-    expect(log).toHaveBeenCalledWith(expect.stringContaining("SUPABASE_SERVICE_ROLE_KEY"));
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("MONGODB_URI"));
 
     const service = new WaitlistService(store);
     expect((await service.signup({ email: "a@example.com" }, "ip")).status).toBe(503);
@@ -32,16 +35,37 @@ describe("storage selection from environment", () => {
   });
 });
 
-describe("waitlist service with memory storage", () => {
-  let store: MemoryWaitlistStore;
+// A local single-node replica set: MongoDB transactions need one, like Atlas provides.
+let replSet: MongoMemoryReplSet;
+let databases = 0;
+const mongoStores: MongoWaitlistStore[] = [];
+
+beforeAll(async () => {
+  replSet = await MongoMemoryReplSet.create({ replSet: { count: 1, storageEngine: "wiredTiger" } });
+}, 120_000);
+
+afterAll(async () => {
+  await Promise.all(mongoStores.map((store) => store.close()));
+  await replSet?.stop();
+});
+
+const storeFactories: [string, () => WaitlistStore][] = [
+  ["memory", () => new MemoryWaitlistStore()],
+  ["MongoDB", () => {
+    const store = new MongoWaitlistStore(replSet.getUri(), `waitlist_test_${++databases}`);
+    mongoStores.push(store);
+    return store;
+  }],
+];
+
+describe.each(storeFactories)("waitlist service with %s storage", (_name, createStore) => {
+  let store: WaitlistStore;
   let service: WaitlistService;
 
   beforeEach(() => {
-    store = new MemoryWaitlistStore();
+    store = createStore();
     service = new WaitlistService(store);
   });
-
-  afterEach(() => vi.useRealTimers());
 
   it("assigns sequential positions and unique eight-character referral codes", async () => {
     const first = await service.signup({ email: " First@Example.com " }, "ip-1");
@@ -72,26 +96,6 @@ describe("waitlist service with memory storage", () => {
       status: 400, body: { error: expect.any(String) },
     });
     expect(await store.count()).toBe(0);
-  });
-
-  it("limits all POST attempts, including invalid ones, to five per IP", async () => {
-    for (let i = 0; i < 5; i++) {
-      expect((await service.signup({}, "ip-1")).status).toBe(400);
-    }
-    expect(await service.signup({ email: "sixth@example.com" }, "ip-1"))
-      .toEqual({ status: 429, body: { error: expect.any(String) } });
-    expect((await service.signup({ email: "other@example.com" }, "ip-2")).status).toBe(201);
-    expect(await store.count()).toBe(1);
-  });
-
-  it("uses a rolling minute and permits requests exactly after expiry", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
-    for (let i = 0; i < 5; i++) await service.signup({}, "ip-1");
-    vi.advanceTimersByTime(59_999);
-    expect((await service.signup({}, "ip-1")).status).toBe(429);
-    vi.advanceTimersByTime(1);
-    expect((await service.signup({ email: "fresh@example.com" }, "ip-1")).status).toBe(201);
   });
 
   it("moves the inviter from eighth to third while keeping positions unique", async () => {
@@ -139,11 +143,62 @@ describe("waitlist service with memory storage", () => {
       .toMatchObject({ body: { position: 3 } });
   });
 
+  it("gives simultaneous signups with different emails unique, contiguous positions", async () => {
+    for (let i = 1; i <= 8; i++) {
+      await store.join({ email: `person${i}@example.com`, referralCode: `code000${i}` });
+    }
+    const results = await Promise.all(Array.from({ length: 6 }, (_, i) =>
+      service.signup({ email: `new${i}@example.com`, ref: i % 2 ? "code0008" : undefined }, `ip-${i}`)));
+    expect(results.map((result) => result.status)).toEqual(Array(6).fill(201));
+    const positions = [];
+    for (let i = 1; i <= 8; i++) {
+      positions.push(Reflect.get((await service.signup({ email: `person${i}@example.com` }, `a-${i}`)).body, "position"));
+    }
+    for (let i = 0; i < 6; i++) {
+      positions.push(Reflect.get((await service.signup({ email: `new${i}@example.com` }, `b-${i}`)).body, "position"));
+    }
+    expect([...positions].sort((a, b) => a - b)).toEqual(Array.from({ length: 14 }, (_, i) => i + 1));
+    expect(await store.count()).toBe(14);
+  });
+
   it("rejects a referral-code collision without changing stored data", async () => {
     await store.join({ email: "first@example.com", referralCode: "samecode" });
     await expect(store.join({ email: "other@example.com", referralCode: "samecode" }))
       .rejects.toBeInstanceOf(ReferralCodeConflictError);
     expect(await store.count()).toBe(1);
+  });
+
+});
+
+describe("waitlist service with memory storage only", () => {
+  let store: MemoryWaitlistStore;
+  let service: WaitlistService;
+
+  beforeEach(() => {
+    store = new MemoryWaitlistStore();
+    service = new WaitlistService(store);
+  });
+
+  afterEach(() => vi.useRealTimers());
+
+  it("limits all POST attempts, including invalid ones, to five per IP", async () => {
+    for (let i = 0; i < 5; i++) {
+      expect((await service.signup({}, "ip-1")).status).toBe(400);
+    }
+    expect(await service.signup({ email: "sixth@example.com" }, "ip-1"))
+      .toEqual({ status: 429, body: { error: expect.any(String) } });
+    expect((await service.signup({ email: "other@example.com" }, "ip-2")).status).toBe(201);
+    expect(await store.count()).toBe(1);
+  });
+
+  it("uses a rolling minute and permits requests exactly after expiry", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+    for (let i = 0; i < 5; i++) await service.signup({}, "ip-1");
+    vi.advanceTimersByTime(59_999);
+    expect((await service.signup({}, "ip-1")).status).toBe(429);
+    vi.advanceTimersByTime(1);
+    expect((await service.signup({ email: "fresh@example.com" }, "ip-1")).status).toBe(201);
   });
 
   it("retries generated-code collisions", async () => {
@@ -171,62 +226,33 @@ describe("waitlist service with memory storage", () => {
   });
 });
 
-describe("Supabase REST adapter (network stubbed)", () => {
-  afterEach(() => vi.unstubAllGlobals());
-
-  it("posts a single atomic signup RPC with server credentials", async () => {
-    const fetchStub = vi.fn().mockResolvedValue(Response.json({
-      created: true, position: 2, referralCode: "code0002", total: 2,
-    }));
-    vi.stubGlobal("fetch", fetchStub);
-    const store = new SupabaseWaitlistStore("https://example.supabase.co/", "test-secret");
-    expect(await store.join({ email: "new@example.com", referralCode: "code0002", ref: "code0001" }))
-      .toEqual({ created: true, position: 2, referralCode: "code0002", total: 2 });
-    const [url, init] = fetchStub.mock.calls[0];
-    expect(url).toBe("https://example.supabase.co/rest/v1/rpc/join_waitlist");
-    expect(init).toMatchObject({ method: "POST", cache: "no-store", headers: {
-      apikey: "test-secret", Authorization: "Bearer test-secret", "Content-Type": "application/json",
-    } });
-    expect(JSON.parse(init.body)).toEqual({
-      p_email: "new@example.com", p_referral_code: "code0002", p_ref: "code0001",
-    });
+describe("MongoDB adapter", () => {
+  it("does not connect until the first request", () => {
+    expect(() => new MongoWaitlistStore("mongodb://127.0.0.1:1/")).not.toThrow();
   });
 
-  it("reads an exact count without downloading emails", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, {
-      headers: { "content-range": "*/12" },
-    })));
-    expect(await new SupabaseWaitlistStore("https://example.supabase.co", "test-secret").count()).toBe(12);
-  });
+  it("reports an unreachable server without leaking the connection string", async () => {
+    const store = new MongoWaitlistStore("mongodb://secret-user:secret-pass@127.0.0.1:1/");
+    mongoStores.push(store);
+    const error = await store.count().catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(Error);
+    expect(String(error)).not.toMatch(/secret|127\.0\.0\.1/);
+  }, 15_000);
 
-  it.each([
-    () => new Response("private details", { status: 500 }),
-    () => Response.json({ unexpected: true }),
-  ])("rejects failed or malformed RPC responses", async (response) => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response()));
-    await expect(new SupabaseWaitlistStore("https://example.supabase.co", "test-secret")
-      .join({ email: "new@example.com", referralCode: "code0001" })).rejects.toThrow();
-  });
-
-  it("maps uniqueness conflicts to a retryable referral collision", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ code: "23505" }, { status: 409 })));
-    await expect(new SupabaseWaitlistStore("https://example.supabase.co", "test-secret")
-      .join({ email: "new@example.com", referralCode: "code0001" }))
-      .rejects.toBeInstanceOf(ReferralCodeConflictError);
-  });
-
-  it("rejects missing count metadata rather than reporting zero", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null)));
-    await expect(new SupabaseWaitlistStore("https://example.supabase.co", "test-secret").count())
-      .rejects.toThrow();
+  it("stores entries by normalized email and keeps the lock out of the count", async () => {
+    const store = new MongoWaitlistStore(replSet.getUri(), `waitlist_test_${++databases}`);
+    mongoStores.push(store);
+    await new WaitlistService(store).signup({ email: " Mixed@Example.com " }, "ip");
+    expect(await store.count()).toBe(1);
+    const again = await store.join({ email: "mixed@example.com", referralCode: "unused01" });
+    expect(again).toMatchObject({ created: false, position: 1, total: 1 });
   });
 });
 
 describe("waitlist HTTP routes", () => {
   beforeEach(() => {
     vi.resetModules();
-    vi.stubEnv("SUPABASE_URL", "");
-    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "");
+    vi.stubEnv("MONGODB_URI", "");
     delete (globalThis as { __waitlistService?: unknown }).__waitlistService;
   });
   afterEach(() => vi.unstubAllEnvs());

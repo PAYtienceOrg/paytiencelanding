@@ -6,10 +6,10 @@ import { Stagger, StaggerItem } from "./Stagger";
 const steps = [
   ["01", "Choose your crypto", "Pick a coin and an amount."],
   ["02", "Set your price & deadline", "Choose your target and how long to wait."],
-  ["03", "Get crypto or a refund", "We fill your order or return your money."],
+  ["03", "Get the asset or your money back", "We fill your order or return your money."],
 ];
 
-const filler = "Choose your crypto, set a lower price and a deadline. If the market reaches your target, we buy for you. If it doesn't, you get a full refund.";
+const filler = "Choose your crypto, set a lower price and a deadline. At your deadline we check the price once: at or below your target, we buy for you. Above it, you get your money back.";
 
 // Preview page: a demo of the four motion components, long enough to scroll.
 export function MotionPreview() {
@@ -18,7 +18,7 @@ export function MotionPreview() {
       <section className="min-h-[80vh] border-b border-rule pb-16">
         <p className="text-xs font-semibold uppercase tracking-[0.2em]">SplitHeadline</p>
         <SplitHeadline
-          text="Name your price. Get it — or get refunded."
+          text="Get paid while you wait PAYtiently."
           className="mt-6 font-serif text-5xl font-bold leading-tight sm:text-7xl"
         />
         <p className="mt-8 text-sm opacity-70">Scroll down ↓</p>
@@ -27,8 +27,8 @@ export function MotionPreview() {
       <section className="min-h-[70vh] border-b border-rule py-16">
         <p className="text-xs font-semibold uppercase tracking-[0.2em]">CountUp</p>
         <Reveal>
-          <p className="mt-6 font-serif text-lg">Full refund</p>
-          <CountUp value={12000} prefix="$" className="font-serif text-6xl font-bold text-accent" />
+          <p className="mt-6 font-serif text-lg">Get your money back</p>
+          <CountUp value={12000} suffix=" USDC" className="font-serif text-6xl font-bold text-accent" />
         </Reveal>
         <Reveal delay={0.15}>
           <p className="mt-10 text-lg">

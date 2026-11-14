@@ -1,7 +1,16 @@
 // Pure functions for the simulator: coins, example prices, path generation, formatting. No React dependency, so they are easy to test.
 
 export type CoinId = "ETH" | "BTC" | "SOL";
-export type Scenario = "drop" | "rise";
+
+// buy: "buy low" — commit USDC, set a target below today's price.
+// sell: "sell high" — commit the asset, set a target above today's price.
+export type Strategy = "buy" | "sell";
+
+// Example markets, described relative to the target:
+// hit: reaches the target mid-window and is past it at the deadline (fills). Buy low turns back in between; sell high stays past it.
+// turn: touches the target mid-window but has turned back by the deadline (refund).
+// away: moves away and never reaches the target (refund).
+export type Scenario = "hit" | "turn" | "away";
 
 export type Coin = {
   id: CoinId;
@@ -19,21 +28,33 @@ export const COINS: Coin[] = [
 
 export const coinById = (id: CoinId) => COINS.find((c) => c.id === id) ?? COINS[0];
 
+// How far the target can be from today's price, in percent
 export const DISCOUNT_MIN = 1;
 export const DISCOUNT_MAX = 20;
 export const WINDOWS = [1, 3, 7];
 
 // Number of points in a price path
 export const POINTS = 48;
-// Index of the point where the drop scenario hits the target
-export const HIT_INDEX = Math.round((POINTS - 1) * 0.62);
 
 const cents = (n: number) => Math.round(n * 100) / 100;
 
-export const targetFor = (price: number, discountPct: number) => cents(price * (1 - discountPct / 100));
+// Target price: pct below today's price to buy low, pct above it to sell high
+export const targetFor = (price: number, pct: number, strategy: Strategy = "buy") =>
+  cents(price * (1 + (strategy === "buy" ? -pct : pct) / 100));
 
+// A price as a bare number (chart axis ticks, where the unit is shown once)
+export function formatPrice(n: number) {
+  return n.toLocaleString("en-US", { maximumFractionDigits: Math.abs(n) < 100 ? 2 : 0 });
+}
+
+// A price in USDC: prices are quoted in USDC, the currency orders are paid and settled in
 export function formatMoney(n: number) {
-  return `$${n.toLocaleString("en-US", { maximumFractionDigits: Math.abs(n) < 100 ? 2 : 0 })}`;
+  return `${formatPrice(n)} USDC`;
+}
+
+// Amounts of money are in USDC, the currency orders are paid and settled in
+export function formatUsdc(n: number) {
+  return `${n.toLocaleString("en-US", { maximumFractionDigits: 2 })} USDC`;
 }
 
 export function formatAmount(n: number, coin: CoinId) {
@@ -43,51 +64,79 @@ export function formatAmount(n: number, coin: CoinId) {
 // Deterministic "noise": the same result every time (server and client render alike). Range is roughly -1..1.
 const wiggle = (i: number) => Math.sin(i * 1.9) * 0.55 + Math.sin(i * 0.7 + 0.8) * 0.45;
 
-export type Path = { prices: number[]; hitIndex: number | null };
+// touchIndex: the first point after the start at or past the target, or null if the price never gets there.
+export type Path = { prices: number[]; touchIndex: number | null };
 
-// Builds an example price path.
-// drop: the price falls, first touches the target at HIT_INDEX, then rebounds slightly.
-// rise: the price trends up, always above the target, and the order is not filled by the deadline.
-export function buildPath(price: number, target: number, scenario: Scenario): Path {
-  const gap = Math.max(price - target, price * 0.005);
-  const prices: number[] = [];
+export type Outcome = "fill" | "refund";
 
-  if (scenario === "drop") {
-    const amp = gap * 0.18;
-    for (let i = 0; i < POINTS; i++) {
-      if (i === 0) {
-        prices.push(price);
-      } else if (i < HIT_INDEX) {
-        const t = i / HIT_INDEX;
-        const p = price - gap * Math.pow(t, 1.35) + wiggle(i) * amp * Math.sqrt(1 - t);
-        // Must stay above the target until the hit, and never above the start so it does not cover the "Now" label
-        prices.push(cents(Math.min(Math.max(p, target + gap * 0.03), price)));
-      } else if (i === HIT_INDEX) {
-        prices.push(target);
-      } else {
-        const t = (i - HIT_INDEX) / (POINTS - 1 - HIT_INDEX);
-        const p = target + gap * 0.35 * t + Math.abs(wiggle(i)) * amp * 0.5 * t;
-        prices.push(cents(p));
-      }
-    }
-    return { prices, hitIndex: HIT_INDEX };
+// Whether a price has reached the target: at or below it to buy low, at or above it to sell high
+export const reached = (price: number, target: number, strategy: Strategy) => (strategy === "buy" ? price <= target : price >= target);
+
+// An order is settled once, at the deadline, like a European option: only the last price counts.
+// If it has reached the target, the order fills at the target price; otherwise it is refunded.
+// Touching the target earlier in the window changes nothing.
+export const outcomeOf = (prices: number[], target: number, strategy: Strategy): Outcome =>
+  reached(prices[prices.length - 1], target, strategy) ? "fill" : "refund";
+
+// Each scenario as [time 0..1, distance travelled towards the target], where 1 is exactly at the target
+// and more than 1 is past it. Times are picked so a 3-day window reads "touches on day 2, settles on day 3".
+const SHAPES: Record<Scenario, [number, number][]> = {
+  hit: [
+    [0, 0],
+    [0.56, 1.14],
+    [0.8, 0.72],
+    [1, 1.2],
+  ],
+  turn: [
+    [0, 0],
+    [0.58, 1.15],
+    [1, 0.4],
+  ],
+  away: [
+    [0, 0],
+    [0.22, 0.3],
+    [1, -0.9],
+  ],
+};
+
+// The sell-high "hit": once past the target it stays there until the deadline
+const HIT_AND_STAY: [number, number][] = [
+  [0, 0],
+  [0.56, 1.14],
+  [0.8, 1.1],
+  [1, 1.2],
+];
+
+// Builds an example price path between today's price and the deadline.
+// Sell-high paths are the buy-low shapes mirrored around today's price, except for "hit" (see above).
+export function buildPath(price: number, target: number, strategy: Strategy, scenario: Scenario): Path {
+  const gap = Math.max(Math.abs(price - target), price * 0.005);
+  const direction = strategy === "buy" ? -1 : 1;
+  const stay = strategy === "sell" && scenario === "hit";
+  const shape = stay ? HIT_AND_STAY : SHAPES[scenario];
+  let crossed = false;
+  const last = POINTS - 1;
+  const prices: number[] = [price];
+
+  for (let i = 1; i < POINTS; i++) {
+    const t = i / last;
+    const k = Math.max(1, shape.findIndex(([time]) => time >= t));
+    const [t0, d0] = shape[k - 1];
+    const [t1, d1] = shape[k];
+    const u = (t - t0) / (t1 - t0);
+    // Ease between the two key points; the wobble fades to nothing at each of them
+    const eased = d0 + (d1 - d0) * (1 - Math.cos(Math.PI * u)) / 2;
+    let travelled = eased + wiggle(i) * 0.07 * Math.sin(Math.PI * u);
+    // Early on, never move away from the target past the start: keeps the "Now" label clear
+    if (t < 0.3) travelled = Math.max(travelled, 0);
+    // Once past the target, never wobble back across it
+    if (stay && crossed) travelled = Math.max(travelled, 1.03);
+    if (travelled >= 1) crossed = true;
+    prices.push(cents(price + direction * gap * travelled));
   }
 
-  const climb = price * 0.06;
-  const amp = price * 0.008 + gap * 0.1;
-  for (let i = 0; i < POINTS; i++) {
-    if (i === 0) {
-      prices.push(price);
-      continue;
-    }
-    const t = i / (POINTS - 1);
-    // A small dip early on, then a steady climb
-    const p = price + climb * Math.pow(t, 1.2) - gap * 0.35 * Math.sin(Math.PI * Math.min(t * 2, 1)) + wiggle(i) * amp;
-    const floor = Math.max(p, target + gap * 0.45);
-    // Never above the start in the first 30%, leaving room for the "Now" label
-    prices.push(cents(t < 0.3 ? Math.min(floor, price) : floor));
-  }
-  return { prices, hitIndex: null };
+  const touch = prices.findIndex((p, i) => i > 0 && reached(p, target, strategy));
+  return { prices, touchIndex: touch === -1 ? null : touch };
 }
 
 // Y-axis ticks: three to five round numbers
@@ -109,5 +158,5 @@ export function priceAt(prices: number[], progress: number) {
   return prices[i0] + (prices[i1] - prices[i0]) * (f - i0);
 }
 
-// Day of the fill (1-based)
-export const fillDay = (hitIndex: number, days: number) => Math.max(1, Math.ceil((hitIndex / (POINTS - 1)) * days));
+// Day on which a point of the path falls (1-based)
+export const dayOf = (index: number, days: number) => Math.min(days, Math.max(1, Math.ceil((index / (POINTS - 1)) * days)));

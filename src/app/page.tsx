@@ -1,14 +1,14 @@
+import { Assets } from "@/components/sections/Assets";
 import { Faq } from "@/components/sections/Faq";
-import { GoodToKnow } from "@/components/sections/GoodToKnow";
 import { HowItWorks } from "@/components/sections/HowItWorks";
 import { EarlyAccess, SiteFooter, SiteHeader } from "@/components/sections/SiteChrome";
 import { HeroChart } from "@/components/simulator/HeroChart";
 import { Simulator } from "@/components/simulator/Simulator";
-import { JoinLink } from "@/components/waitlist/JoinLink";
 import { WaitlistCount } from "@/components/waitlist/WaitlistCount";
+import { WaitlistForm } from "@/components/waitlist/WaitlistForm";
 
 // The three points from the old "Why wait" section, condensed into bullets under the hero
-const facts = ["No chart-watching", "You pick the price & deadline", "Full refund if it doesn't fill"];
+const facts = ["Buy low or sell high", "Upfront yield, yours to keep", "Get back your money without any loss", "Settled once, at your deadline"];
 
 function Check() {
   return (
@@ -18,7 +18,7 @@ function Check() {
   );
 }
 
-// Page order: hero → three steps → simulator (the focus, full-width light green) → rules → FAQ → early access
+// Page order: hero → how it works → simulator (the focus, full-width light green) → more assets → FAQ → early access
 export default function Home() {
   return (
     <>
@@ -26,16 +26,12 @@ export default function Home() {
 
       <main id="main">
         <div id="top" className="mx-auto max-w-6xl divide-y divide-rule px-6">
-          <section aria-labelledby="hero-title" className="grid gap-10 py-10 md:grid-cols-[1fr_1fr] md:gap-0 md:py-12">
+          <section aria-labelledby="hero-title" className="grid gap-10 pb-10 pt-12 md:grid-cols-[1fr_1fr] md:gap-0 md:pb-12 md:pt-16">
             <div className="md:pr-10">
               <h1 id="hero-title" className="font-serif text-4xl font-semibold leading-[1.05] tracking-tight sm:text-6xl">
-                Name your price. Get it — or get refunded.
+                Get paid while you wait PAYtiently.
               </h1>
-              <p className="mt-5 max-w-md text-base leading-relaxed text-ink/85">
-                Choose your crypto, set a lower price and a deadline. If the market reaches your target, we buy for you. If it
-                doesn&apos;t, you get a full refund.
-              </p>
-              <ul className="mt-6 space-y-2 text-sm">
+              <ul className="mt-6 space-y-2 text-base">
                 {facts.map((f) => (
                   <li key={f} className="flex items-start gap-2">
                     <Check />
@@ -44,14 +40,11 @@ export default function Home() {
                 ))}
               </ul>
               <div className="mt-8">
-                <JoinLink className="inline-flex min-h-12 items-center bg-accent px-7 text-sm font-semibold text-paper transition-colors hover:bg-ink">
-                  Join the waitlist
-                </JoinLink>
+                <WaitlistForm variant="hero" />
               </div>
-              <div className="mt-4 min-h-5">
+              <div className="mt-3 min-h-5">
                 <WaitlistCount />
               </div>
-              <p className="mt-1 text-xs text-ink/70">Early access opens in waves — your place in line decides when you get in.</p>
             </div>
             <div className="md:border-l md:border-ink md:pl-10">
               <HeroChart />
@@ -64,7 +57,7 @@ export default function Home() {
         <Simulator />
 
         <div className="mx-auto max-w-6xl divide-y divide-rule px-6">
-          <GoodToKnow />
+          <Assets />
           <Faq />
         </div>
 

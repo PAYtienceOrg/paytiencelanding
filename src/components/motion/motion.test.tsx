@@ -29,9 +29,9 @@ afterEach(() => {
 });
 
 describe("shows the final state right away with reduced motion", () => {
-  it("CountUp shows the final value with a $ prefix and thousands separators", () => {
-    render(<CountUp value={12000} prefix="$" />);
-    expect(screen.getByText("$12,000")).toBeTruthy();
+  it("CountUp shows the final value with a USDC suffix and thousands separators", () => {
+    render(<CountUp value={12000} suffix=" USDC" />);
+    expect(screen.getByText("12,000 USDC")).toBeTruthy();
   });
 
   it("CountUp without a prefix only adds thousands separators", () => {
@@ -66,8 +66,8 @@ describe("shows the final state right away with reduced motion", () => {
 describe("initial state with motion enabled", () => {
   it("CountUp starts from 0", () => {
     reduced.value = false;
-    render(<CountUp value={12000} prefix="$" />);
-    expect(screen.getByText("$0")).toBeTruthy();
+    render(<CountUp value={12000} suffix=" USDC" />);
+    expect(screen.getByText("0 USDC")).toBeTruthy();
   });
 
   it("Reveal starts hidden", () => {

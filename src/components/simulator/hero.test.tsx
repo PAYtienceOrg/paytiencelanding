@@ -21,20 +21,16 @@ import { HeroChart } from "./HeroChart";
 afterEach(cleanup);
 
 describe("HeroChart", () => {
-  it("demos the drop-and-fill outcome by default", () => {
+  it("shows the ETH / USDC pair and demos buy low by default", () => {
     render(<HeroChart />);
-    expect(screen.getByRole("button", { name: /If it drops/ }).getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getByText("Filled at $2,400 — you get 5 ETH.")).toBeTruthy();
+    expect(screen.getByText("ETH / USDC")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Buy low/ }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByText("Day 3 deadline: ETH is below 2,400 USDC — you buy 5 ETH at 2,400 USDC.")).toBeTruthy();
   });
 
-  it("clicking the rise option shows a full refund", () => {
+  it("clicking sell high shows the sale at the higher target", () => {
     render(<HeroChart />);
-    fireEvent.click(screen.getByRole("button", { name: /If it rises/ }));
-    expect(screen.getByText("Not reached by day 3 — $12,000 refunded.")).toBeTruthy();
-  });
-
-  it("links to the simulator", () => {
-    render(<HeroChart />);
-    expect(screen.getByRole("link", { name: /Try your own numbers/ }).getAttribute("href")).toBe("#simulator");
+    fireEvent.click(screen.getByRole("button", { name: /Sell high/ }));
+    expect(screen.getByText("Day 3 deadline: ETH is above 2,600 USDC — you sell 5 ETH at 2,600 USDC.")).toBeTruthy();
   });
 });

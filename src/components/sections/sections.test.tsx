@@ -18,7 +18,6 @@ vi.stubGlobal(
 
 import { Simulator } from "../simulator/Simulator";
 import { Faq } from "./Faq";
-import { GoodToKnow } from "./GoodToKnow";
 import { HowItWorks } from "./HowItWorks";
 import { MobileNav } from "./MobileNav";
 
@@ -27,13 +26,15 @@ afterEach(cleanup);
 const banned = /risk-free|guaranteed|zero risk/i;
 
 describe("HowItWorks", () => {
-  it("shows the title and three steps", () => {
+  it("shows the title and five steps", () => {
     render(<HowItWorks />);
     expect(screen.getByRole("heading", { name: "How it works" })).toBeTruthy();
-    expect(screen.getAllByRole("listitem")).toHaveLength(3);
-    expect(screen.getByText("Choose your crypto")).toBeTruthy();
-    expect(screen.getByText("Set your price & deadline")).toBeTruthy();
-    expect(screen.getByText("Get crypto or a refund")).toBeTruthy();
+    expect(screen.getAllByRole("listitem")).toHaveLength(5);
+    for (const title of ["Choose your assets", "Set a deadline", "Set a target price", "Execute and get paid", "Get the asset or your money back"]) {
+      expect(screen.getByText(title)).toBeTruthy();
+    }
+    expect(screen.getByText("Pick an asset.")).toBeTruthy();
+    expect(screen.getByText(/You keep your upfront yield/)).toBeTruthy();
   });
 
   it("copy contains no banned words", () => {
@@ -46,55 +47,87 @@ describe("HowItWorks", () => {
 describe("Simulator", () => {
   const commit = () => screen.getByText("You commit").nextElementSibling?.textContent;
 
-  it("default: 5 ETH, $2,400 target, the drop scenario fills", () => {
+  it("default: buy low, 5 ETH at 2,400 USDC, touched on day 2 but filled only at the deadline", () => {
     render(<Simulator />);
-    expect(commit()).toBe("$12,000");
-    expect(screen.getByText("You get 5 ETH at $2,400")).toBeTruthy();
-    expect(screen.getByText("Target reached on day 2")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Buy low/ }).getAttribute("aria-pressed")).toBe("true");
+    expect(commit()).toBe("12,000 USDC");
+    expect(screen.getByText("You get 5 ETH at 2,400 USDC")).toBeTruthy(); // result card
+    expect(screen.getByText("You get 5 ETH")).toBeTruthy(); // outcome scale
+    expect(screen.getByText("Deadline reached: ETH is at or below your target")).toBeTruthy();
+    expect(screen.getByText(/first touched 2,400 USDC on day 2, but nothing happened until the deadline/)).toBeTruthy();
   });
 
-  it("switching to the rise scenario: full refund", async () => {
+  it("touching the target and turning back does not fill: money back", async () => {
     render(<Simulator />);
-    fireEvent.click(screen.getByRole("button", { name: /Price rises/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Touches, turns back" }));
     // The old result card fades out before the new one appears
-    expect(await screen.findByText("$12,000 refunded in full")).toBeTruthy();
-    expect(screen.getByText(/above your \$2,400 target/)).toBeTruthy();
+    expect(await screen.findByText("Deadline reached: ETH is above your target")).toBeTruthy();
+    expect(screen.getAllByText("You get your 12,000 USDC back")).toHaveLength(2); // summary and result card
+    expect(screen.getByText(/went below 2,400 USDC on day 2, but ended the window at .* Only the price at the deadline counts\./)).toBeTruthy();
   });
 
-  it("changing the coin resets the amount to that coin's default", () => {
+  it("never reaching the target: money back", async () => {
+    render(<Simulator />);
+    fireEvent.click(screen.getByRole("button", { name: "Never reaches it" }));
+    expect(await screen.findByText("Deadline reached: ETH is above your target")).toBeTruthy();
+    expect(screen.getAllByText("You get your 12,000 USDC back")).toHaveLength(2); // summary and result card
+    expect(screen.getByText(/above your 2,400 USDC target/)).toBeTruthy();
+  });
+
+  it("sell high: commits the asset, sells at a target above today's price", async () => {
+    render(<Simulator />);
+    fireEvent.click(screen.getByRole("button", { name: /Sell high/ }));
+    expect(commit()).toBe("5 ETH");
+    expect(screen.getByText("You sell 5 ETH at 2,600 USDC")).toBeTruthy();
+    expect(screen.getByText(/At or above 2,600 USDC/)).toBeTruthy();
+    expect(screen.getByText("You get 13,000 USDC")).toBeTruthy();
+    expect(screen.getByText("You get your 5 ETH back")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Touches, turns back" }));
+    expect(await screen.findByText("Deadline reached: ETH is below your target")).toBeTruthy();
+    expect(screen.getAllByText("You get your 5 ETH back")).toHaveLength(2);
+  });
+
+  it("changing the asset resets the amount to that asset's default", () => {
     render(<Simulator />);
     fireEvent.click(screen.getByRole("button", { name: /BTC/ }));
     expect((screen.getByLabelText("How much") as HTMLSelectElement).value).toBe("0.1");
     // 65,000 × 96% = 62,400; × 0.1 = 6,240
-    expect(commit()).toBe("$6,240");
-    expect(screen.getByText("You get 0.1 BTC at $62,400")).toBeTruthy();
+    expect(commit()).toBe("6,240 USDC");
+    expect(screen.getByText("You get 0.1 BTC at 62,400 USDC")).toBeTruthy();
   });
 
   it("the result follows changes to price, amount and days", () => {
     render(<Simulator />);
-    // The slider value is the negative discount: -10 = 10% below the current price
-    fireEvent.change(screen.getByLabelText("Your price"), { target: { value: "-10" } });
+    // To buy low the slider value is the negative distance: -10 = 10% below the current price
+    fireEvent.change(screen.getByLabelText("Your target price"), { target: { value: "-10" } });
     fireEvent.change(screen.getByLabelText("How much"), { target: { value: "2" } });
     fireEvent.click(screen.getByRole("button", { name: "7 days" }));
-    expect(commit()).toBe("$4,500");
-    expect(screen.getByText("You get 2 ETH at $2,250")).toBeTruthy();
-    expect(screen.getByText("Target reached on day 5")).toBeTruthy();
+    expect(commit()).toBe("4,500 USDC");
+    expect(screen.getByText("You get 2 ETH at 2,250 USDC")).toBeTruthy();
+    expect(screen.getByText("ETH price when the 7 days end")).toBeTruthy();
   });
 
   it("the price slider goes up to the right, with prices shown at both ends", () => {
     render(<Simulator />);
-    const slider = screen.getByLabelText("Your price") as HTMLInputElement;
-    expect(screen.getByText("$2,000")).toBeTruthy(); // left end: 20% lower
-    expect(screen.getByText("$2,475")).toBeTruthy(); // right end: 1% lower
+    const slider = screen.getByLabelText("Your target price") as HTMLInputElement;
+    expect(screen.getByText("2,000 USDC")).toBeTruthy(); // left end: 20% lower
+    expect(screen.getByText("2,475 USDC")).toBeTruthy(); // right end: 1% lower
     fireEvent.change(slider, { target: { value: slider.max } });
-    expect(commit()).toBe("$12,375"); // 5 × $2,475
+    expect(commit()).toBe("12,375 USDC"); // 5 × 2,475
+
+    fireEvent.click(screen.getByRole("button", { name: /Sell high/ }));
+    expect(screen.getAllByText(/2,525 USDC/).length).toBeGreaterThan(0); // left end: 1% higher (also the current target)
+    expect(screen.getByText("3,000 USDC")).toBeTruthy(); // right end: 20% higher
   });
 
-  it("lists both outcomes together", () => {
+  it("shows the order at a glance: yield now, then two outcomes split at the target", () => {
     render(<Simulator />);
-    expect(screen.getByText("If ETH hits $2,400 within 3 days")).toBeTruthy();
-    expect(screen.getByText("You get 5 ETH")).toBeTruthy();
-    expect(screen.getByText("$12,000 back")).toBeTruthy();
+    expect(screen.getByText("+ Upfront yield")).toBeTruthy();
+    expect(screen.getByText("Target 2,400 USDC")).toBeTruthy();
+    expect(screen.getByText(/At or below 2,400 USDC/)).toBeTruthy();
+    expect(screen.getByText(/Above 2,400 USDC/)).toBeTruthy();
+    expect(screen.getByText("You get your 12,000 USDC back")).toBeTruthy();
+    expect(screen.getByText(/touching 2,400 USDC earlier doesn't fill/)).toBeTruthy();
   });
 
   it("buttons are large enough to tap on a phone", () => {
@@ -102,20 +135,13 @@ describe("Simulator", () => {
     for (const b of screen.getAllByRole("button")) expect(b.className).toMatch(/min-h-11/);
   });
 
-  it("copy contains no banned words", () => {
+  it("uses only theme colours and no banned words", async () => {
     const { container } = render(<Simulator />);
-    fireEvent.click(screen.getByRole("button", { name: /Price rises/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Never reaches it" }));
+    await screen.findByText("Deadline reached: ETH is above your target");
+    expect(container.innerHTML).not.toMatch(/refund-tint|text-refund|border-refund|fill-refund|stroke-refund/);
     expect(container.textContent).not.toMatch(banned);
-  });
-});
-
-describe("GoodToKnow", () => {
-  it("four rules, with an anchor", () => {
-    const { container } = render(<GoodToKnow />);
-    expect(container.querySelector("#good-to-know")).toBeTruthy();
-    expect(container.querySelectorAll("dt")).toHaveLength(4);
-    expect(screen.getByText("Orders fill at your target")).toBeTruthy();
-    expect(container.textContent).not.toMatch(banned);
+    expect(container.textContent).not.toMatch(/refund/i);
   });
 });
 
@@ -144,12 +170,26 @@ describe("MobileNav", () => {
 });
 
 describe("Faq", () => {
-  it("six questions, the first open by default", () => {
+  it("eight questions, the first open by default", () => {
     const { container } = render(<Faq />);
     const items = container.querySelectorAll("details");
-    expect(items).toHaveLength(6);
+    expect(items).toHaveLength(8);
+    expect(container.textContent).toMatch(/Only at your deadline/);
+    expect(container.textContent).not.toMatch(/as soon as/i);
     expect(items[0].open).toBe(true);
     expect(items[1].open).toBe(false);
+    expect(container.textContent).not.toMatch(banned);
+  });
+});
+
+describe("Assets", () => {
+  it("lists stocks and ETFs, and marks only pre-stocks as coming soon", async () => {
+    const { Assets } = await import("./Assets");
+    const { container } = render(<Assets />);
+    for (const title of ["Stocks", "ETFs", "Pre-stocks"]) expect(screen.getByRole("heading", { name: title })).toBeTruthy();
+    for (const name of ["NVDA", "TSLA", "SPY", "QQQ", "OpenAI", "SpaceX"]) expect(screen.getByText(name)).toBeTruthy();
+    expect(screen.getAllByText("Coming soon")).toHaveLength(1);
+    expect(container.querySelectorAll("img")).toHaveLength(14);
     expect(container.textContent).not.toMatch(banned);
   });
 });

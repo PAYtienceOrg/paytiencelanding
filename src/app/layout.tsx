@@ -7,8 +7,8 @@ const display = Newsreader({ subsets: ["latin"], variable: "--font-display", wei
 const sans = IBM_Plex_Sans({ subsets: ["latin"], variable: "--font-sans", weight: ["400", "500", "600", "700"] });
 
 export const metadata: Metadata = {
-  title: "Paytience",
-  description: "Name your price. Get it — or get refunded.",
+  title: "PAYtience",
+  description: "Get paid while you wait PAYtiently.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
