@@ -19,6 +19,7 @@ const config: Config = {
       fontFamily: {
         serif: ["var(--font-display)", "Georgia", "serif"],
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+        logo: ["var(--font-logo)", "var(--font-sans)", "sans-serif"],
       },
       fontSize: {
         xs: lead("0.75rem", "1.125rem"),

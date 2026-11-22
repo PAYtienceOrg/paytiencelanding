@@ -1,5 +1,6 @@
 import { JoinLink } from "../waitlist/JoinLink";
 import { WaitlistForm } from "../waitlist/WaitlistForm";
+import { Logo } from "./Logo";
 import { MobileNav } from "./MobileNav";
 
 const links = [
@@ -19,8 +20,8 @@ export function SiteHeader() {
         Skip to content
       </a>
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
-        <a href="#top" className="font-serif text-2xl font-bold tracking-tight">
-          PAYtience
+        <a href="#top" aria-label="PAYtience home" className="flex items-center">
+          <Logo />
         </a>
         <nav aria-label="Main" className="flex items-center gap-3 text-sm md:gap-6">
           <ul className="hidden items-center gap-6 md:flex">
